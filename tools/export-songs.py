@@ -115,7 +115,6 @@ for r in sorted(out, key=lambda r: (r['mode'], r['level'], r['artist'], r['title
     lines.append("  { id: %s, title: %s, artist: %s, youtube: %s, key: { tonic: %d, mode: %s }, level: %d, start: %.2f, bpm: %.2f%s, chords: [%s], section: %s%s }," % (
         js_str(sid), js_str(r['title']), js_str(r['artist']), js_str(r['youtube']), r['tonic'], js_str(r['mode']), r['level'], r['start'], r['bpm'], bpb, chords, js_str(sec_ru(r['section'])), mel))
 lines.append('];')
-# корпус как ES-модуль для приложения (lib/songs-data.js) и в старом формате для legacy/, если он есть
+# корпус как ES-модуль приложения
 esm = [lines[0], lines[1], 'const SongsAuto = ['] + lines[3:] + ['export default SongsAuto;']
 open('lib/songs-data.js', 'w', encoding='utf-8').write('\n'.join(esm) + '\n')
-if os.path.isdir('legacy'): open('legacy/songs-data.js', 'w', encoding='utf-8').write('\n'.join(lines) + '\n')

@@ -44,3 +44,6 @@ next-env.d.ts
 /data/
 /flags.jsonl
 /legacy/node_modules/
+
+# re-created by next dev
+/AGENTS.md
