@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Редактор песен — Тренажёр слуха</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="index.html">Тренажёр слуха</a>
+    <nav class="nav"><a href="degrees.html">Ступени</a><a href="progressions.html">Прогрессии</a><a href="songs.html">Аккорды песен</a><a href="melodies.html">Мелодии песен</a><a href="editor.html" class="current">Редактор</a></nav>
+  </header>
+  <script src="header.js"></script>
+
+  <div class="page-title"><h1>Редактор песен</h1><p>Разметьте фрагмент записи: тональность, аккорды по времени, фразу мелодии.</p></div>
+
+  <section class="ed-section">
+    <h2>Видео</h2>
+    <p class="desc">Вставьте ссылку на YouTube или выберите встроенную песню. Пробел — играть/пауза.</p>
+    <div class="ed-row">
+      <label style="flex:1;min-width:240px">Ссылка или ID<input id="fYoutube" placeholder="https://www.youtube.com/watch?v=…"></label>
+      <button class="btn" id="btnLoad">Загрузить</button>
+      <label>Встроенные песни<select id="builtinList"><option value="">выбрать…</option></select></label>
+      <button class="btn quiet" id="btnNew">Новая</button>
+    </div>
+    <div class="songbox">
+      <div class="player"><div id="player"></div></div>
+      <div>
+        <div class="clock" id="clock">0.00</div>
+        <div class="ed-row" style="margin-top:8px">
+          <button class="btn" id="btnPlayPause">Играть</button>
+          <button class="btn quiet mini" data-seek="-5">−5 с</button>
+          <button class="btn quiet mini" data-seek="-1">−1 с</button>
+          <button class="btn quiet mini" data-seek="-0.2">−0.2</button>
+          <button class="btn quiet mini" data-seek="0.2">+0.2</button>
+          <button class="btn quiet mini" data-seek="1">+1 с</button>
+          <button class="btn quiet mini" data-seek="5">+5 с</button>
+          <label>Скорость<select id="rate"><option value="1">1×</option><option value="0.75">0.75×</option><option value="0.5">0.5×</option><option value="0.25">0.25×</option></select></label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ed-section">
+    <h2>Песня</h2>
+    <div class="ed-grid">
+      <label>Название<input id="fTitle"></label>
+      <label>Исполнитель<input id="fArtist"></label>
+      <label>Тоника<select id="fTonic"></select></label>
+      <label>Лад<select id="fMode"><option value="major">мажор</option><option value="minor">минор</option></select></label>
+      <label>Уровень<select id="fLevel"><option value="1">1, главные трезвучия и поп-обороты</option><option value="2">2, вся диатоника и септаккорды</option><option value="3">3, хроматика</option></select></label>
+      <label>Какая часть<input id="fSection" placeholder="Куплет 1: «первые слова»"></label>
+      <label>Идентификатор<input id="fId" placeholder="заполнится сам"></label>
+      <label class="check" style="flex-direction:row;align-items:center"><input type="checkbox" id="fDraft"> Таймкоды приблизительные</label>
+    </div>
+  </section>
+
+  <section class="ed-section">
+    <h2>Сетка</h2>
+    <p class="desc">Запустите запись, на первой доле первого такта нажмите «первая доля = сейчас» (клавиша B). Темп: введите BPM или отбивайте клавишей T. Дальше смотрите на бегунок: если он отстаёт или опережает смены аккордов, подвиньте начало или темп.</p>
+    <div class="ed-row">
+      <label>Первая доля, с<input type="number" step="0.05" id="fStart"></label><button class="btn quiet mini" id="btnStartNow">= сейчас</button>
+      <button class="btn quiet mini" data-start="-0.5">−0.5</button><button class="btn quiet mini" data-start="-0.1">−0.1</button><button class="btn quiet mini" data-start="0.1">+0.1</button><button class="btn quiet mini" data-start="0.5">+0.5</button>
+    </div>
+    <div class="ed-row">
+      <label>Темп, BPM<input type="number" step="0.1" id="fBpm"></label><button class="btn quiet mini" id="btnTap">тап</button><span class="muted" id="tapInfo"></span>
+      <button class="btn quiet mini" data-bpm="-1">−1</button><button class="btn quiet mini" data-bpm="-0.2">−0.2</button><button class="btn quiet mini" data-bpm="0.2">+0.2</button><button class="btn quiet mini" data-bpm="1">+1</button>
+      <label>Долей в такте<input type="number" step="1" min="1" id="fBpb"></label>
+    </div>
+    <div class="ed-row"><button class="btn" id="btnPlayFragment">Проиграть фрагмент</button><span class="muted" id="fEndInfo"></span></div>
+    <div class="sheet" id="edSheet"></div>
+  </section>
+
+  <section class="ed-section">
+    <h2>Аккорды</h2>
+    <p class="desc">Добавляйте аккорды по порядку. Длительность в долях по умолчанию равна такту; для смены на каждую половину такта поставьте 2.</p>
+    <div class="ed-row">
+      <label>Долей у следующего<input type="number" step="1" min="1" value="4" id="fBeats"></label>
+      <span style="color:var(--ink-2);font-size:14px">Обращение:</span>
+      <div class="seg"><button data-inv="0" class="active">основной</button><button data-inv="1">первое</button><button data-inv="2">второе</button><button data-inv="3">третье</button></div>
+      <button class="btn quiet mini" id="btnClearChords">Очистить все</button>
+    </div>
+    <div class="vocab" id="picker"></div>
+    <div class="chordlist" id="chordList"></div>
+  </section>
+
+  <section class="ed-section">
+    <h2>Мелодия</h2>
+    <p class="desc">Короткая фраза, 4–10 нот. Укажите её границы и ступени нот по порядку.</p>
+    <div class="ed-row">
+      <label style="flex:1;min-width:240px">Слова фразы<input id="mLyric" placeholder="When I find myself in times of trouble"></label>
+      <label>Начало, с<input type="number" step="0.05" id="mStart"></label><button class="btn quiet mini" id="mStartNow">= сейчас</button>
+      <label>Конец, с<input type="number" step="0.05" id="mEnd"></label><button class="btn quiet mini" id="mEndNow">= сейчас</button>
+      <button class="btn" id="btnPlayPhrase">Проиграть фразу</button>
+    </div>
+    <div class="keys" id="melKeys"></div>
+    <div class="deglist" id="degList"></div>
+    <div class="ed-row"><button class="btn quiet mini" id="btnDegUndo">Убрать последнюю</button><button class="btn quiet mini" id="btnDegClear">Очистить</button></div>
+  </section>
+
+  <section class="ed-section">
+    <h2>Результат</h2>
+    <p class="desc" id="jsonNote"></p>
+    <div class="ed-row">
+      <button class="btn primary" id="btnSave">Сохранить в этом браузере</button>
+      <button class="btn" id="btnCopy">Скопировать JSON</button>
+      <button class="btn quiet" id="btnImport">Загрузить из JSON ниже</button>
+    </div>
+    <p class="desc" style="margin-top:12px">Сохранённые песни сразу появляются в упражнении «Песни». Чтобы добавить песню в проект навсегда, вставьте JSON в массив SONGS в файле songs-db.js.</p>
+    <textarea class="json" id="json" spellcheck="false"></textarea>
+    <h2 style="margin-top:24px;font-size:20px">Скрытые как неверные</h2>
+    <div class="desc" id="badList"></div>
+    <h2 style="margin-top:24px;font-size:20px">Сохранённые в браузере</h2>
+    <div class="saved-list" id="savedList"></div>
+  </section>
+</div>
+<div id="toast"></div>
+<script src="theory.js"></script>
+<script src="progressions.js"></script>
+<script src="songs-db.js"></script>
+<script src="synth.js"></script>
+<script src="yt.js"></script>
+<script src="common.js"></script>
+<script src="editor.js"></script>
+</body>
+</html>

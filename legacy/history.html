@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>История — Тренажёр слуха</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap wide">
+  <header class="top">
+    <a class="brand" href="index.html">Тренажёр слуха</a>
+    <nav class="nav"><a href="degrees.html">Ступени</a><a href="progressions.html">Прогрессии</a><a href="songs.html">Аккорды песен</a><a href="melodies.html">Мелодии песен</a></nav>
+  </header>
+  <script src="header.js"></script>
+  <section class="hist">
+    <div class="hist-head">
+      <h1>История</h1>
+      <div class="hist-tools">
+        <button class="btn quiet mini" id="btnClearEx">Очистить этот список</button>
+        <button class="btn quiet mini" id="btnClearAll">Очистить всё</button>
+      </div>
+    </div>
+    <div class="tabs" id="histFilter" role="tablist"><button class="tab" role="tab" data-ex="degrees">Ступени</button><button class="tab" role="tab" data-ex="progressions">Прогрессии</button><button class="tab active" role="tab" data-ex="songs">Аккорды песен</button><button class="tab" role="tab" data-ex="melodies">Мелодии песен</button></div>
+    <p class="hist-note" id="histNote">Песни, которые вы уже проходили. Они не показываются повторно, пока не убраны из истории: по одной крестиком или целиком кнопками выше.</p>
+    <div class="hist-list" id="histList"></div>
+  </section>
+</div>
+<div id="toast"></div>
+<script src="theory.js"></script>
+<script src="progressions.js"></script>
+<script src="songs-db.js"></script>
+<script src="synth.js"></script>
+<script src="common.js"></script>
+<script src="history.js"></script>
+</body>
+</html>

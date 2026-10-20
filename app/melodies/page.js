@@ -1,0 +1,9 @@
+import { requireUser, resolveMode } from '@/lib/page-mode';
+import SongsExercise from '@/components/SongsExercise';
+export const metadata = { title: 'Мелодии песен — Тренажёр слуха' };
+export default async function Page({ searchParams }) {
+  const user = await requireUser('/melodies');
+  const sp = (await searchParams) || {};
+  const mode = await resolveMode(user, searchParams);
+  return <SongsExercise task="melody" mode={mode} forcedSong={typeof sp.song === 'string' ? sp.song : null} />;
+}
