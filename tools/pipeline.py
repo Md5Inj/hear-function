@@ -131,10 +131,13 @@ for (artist, title), frs in order:
                 elif c[1].rstrip('m') == c[2].rstrip('m'): match += 0.5
             match /= len(r['checks'])
             need = 1.0 if len(r['checks']) <= 4 else 0.9  # короткий фрагмент — ни одного промаха по тактам
+            # хвост записи (последние 10 %): затухание и коды, совпадения там ложные
+            frag_end = r['start'] + sum(c['beats'] for c in song['chords']) * 60.0 / r['bpm']
+            in_tail = bool(pick.get('dur')) and frag_end > 0.9 * pick['dur']
             if f.get('noprior'):
-                ok = match >= need and r['score'] >= 2.0 * max(r['median'], 0.02) and len(r['checks']) >= 3
+                ok = match >= need and r['score'] >= 2.0 * max(r['median'], 0.02) and len(r['checks']) >= 3 and not in_tail
             else:
-                ok = match >= need and r['score'] >= 1.8 * max(r['median'], 0.02) and abs(r['bpm'] - f['bpm']) <= 0.06 * f['bpm'] and abs(r['start'] - f['start']) <= 12
+                ok = match >= need and r['score'] >= 1.8 * max(r['median'], 0.02) and abs(r['bpm'] - f['bpm']) <= 0.06 * f['bpm'] and abs(r['start'] - f['start']) <= 12 and not in_tail
             rec = dict(songKey=key, artist=artist, title=title, youtube=pick['id'], ytTitle=pick['title'], ytDur=pick['dur'], expectedDur=expected, bb=bb,
                        tonic=f['tonic'], mode=f['mode'], level=f['level'], section=f['section'], beatsPerBar=f['beatsPerBar'], chords=f['chords'],
                        start=r['start'], bpm=r['bpm'], bbStart=f['start'], bbBpm=f['bpm'], score=r['score'], median=r['median'], match=round(match, 2), ok=ok, noprior=bool(f.get('noprior')))

@@ -11,6 +11,13 @@ recs = [json.loads(l) for p in paths if os.path.exists(p) for l in open(p, encod
 LIVE = re.compile(r'[(\[][^)\]]*\b(live|karaoke|cover|remix|instrumental|demo|rehearsal|acoustic|unplugged|lyric|lyrics)\b[^)\]]*[)\]]|\blive (at|from|in|on)\b|\s[-–]\s*live\b', re.I)
 ok = [r for r in recs if r['ok'] and not LIVE.search(r.get('ytTitle', ''))]
 ok = [r for r in ok if max(c['beats'] for c in r['chords']) <= 2 * r['beatsPerBar'] and r['start'] >= 0]
+# хвост записи: фрагменты, заканчивающиеся в последних 10 % ролика (затухание, кода), не берём
+def in_tail(r):
+    dur = r.get('ytDur')
+    if not dur: return False
+    return r['start'] + sum(c['beats'] for c in r['chords']) * 60.0 / r['bpm'] > 0.9 * dur
+n_tail = sum(1 for r in ok if in_tail(r)); ok = [r for r in ok if not in_tail(r)]
+print('dropped in recording tail:', n_tail, file=sys.stderr)
 # отметки «разметка неверна» со страниц (flags.jsonl рядом с проектом)
 flagged = set(); flagged_ids = set()
 if os.path.exists('flags.jsonl'):
@@ -24,6 +31,10 @@ if os.path.exists('data/db.json'):
             if f.get('reason') == 'unavailable': continue  # автоматические отметки плеера не скрывают песни
             if f.get('songId'): flagged_ids.add(f['songId'])
             if f.get('youtube') and f.get('start') is not None: flagged.add((f['youtube'], round(float(f['start']), 2)))
+        # вердикты проверки в админке (коллекция reviews): последний вердикт «неверно» по фрагменту — фрагмент в корпус не идёт
+        latest = {}
+        for rv in sorted(json.load(open('data/db.json', encoding='utf-8')).get('reviews', {}).values(), key=lambda r: r.get('at', '')): latest[rv.get('songId')] = rv.get('status')
+        flagged_ids.update(sid for sid, status in latest.items() if sid and status == 'bad')
     except Exception: pass
 ok = [r for r in ok if (r['youtube'], round(r['start'], 2)) not in flagged]
 # проверка по тактам (tools/verify.py): вердикт пересчитываем по сохранённым оценкам тактов текущим правилом (tools/chordroot.py)
@@ -160,6 +171,7 @@ for r in sorted(out, key=lambda r: (r['mode'], r['level'], r['artist'], r['title
     sid = '%s-%s' % (('bb-' + r['bb']) if not r['bb'].startswith('ch') else r['bb'], re.sub(r'[^a-z0-9]+', '-', (r['section'] or 'x').lower()).strip('-'))
     id_count[sid] += 1
     if id_count[sid] > 1: sid += '-%d' % id_count[sid]
+    if sid in flagged_ids: continue  # отмечен пользователем или забракован в админке
     verify_rows.append(dict(id=sid, youtube=r['youtube'], start=round(r['start'], 2), bpm=r['bpm'], beatsPerBar=r['beatsPerBar'], key=dict(tonic=r['tonic'], mode=r['mode']), level=r['_lvl'], chords=[{'c': c['c'], 'beats': c['beats']} for c in r.get('_origChords', r['chords'])], bb=r['bb']))
     chords = ', '.join('{ c: %s%s }' % (js_str(c['c']), '' if c['beats'] == r['beatsPerBar'] else ', beats: %g' % c['beats']) for c in r['chords'])
     bpb = '' if r['beatsPerBar'] == 4 else ', beatsPerBar: %d' % r['beatsPerBar']
