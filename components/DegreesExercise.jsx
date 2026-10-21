@@ -1,43 +1,57 @@
 'use client';
 /* Упражнение «Ступени»: каденция задаёт тональность, затем звучит одна нота. */
-import { useEffect, useRef, useReducer } from 'react';
+import { useEffect, useRef, useReducer, useState } from 'react';
 import T from '@/lib/theory';
 import P from '@/lib/progressions';
 import { useApp } from './AppProvider';
 import { useExercise } from './useExercise';
 import { useSession, SessionStrip, SettingsPopover } from './SessionStrip';
+import { useMistakes, MistakesEmpty, MistakesBadge } from './useMistakes';
+import HelpPopover from './HelpPopover';
+import LevelPath from './LevelPath';
+import LevelUpBanner from './LevelUpBanner';
 import { toast } from './ui';
 
-export default function DegreesExercise({ mode }) {
+export default function DegreesExercise({ mode, mistakes, tonus }) {
   const { store, audio, logAnswer, weightedPick, pick, settings } = useApp();
   const [, rerender] = useReducer(x => x + 1, 0);
-  const st = useRef({ q: null, answered: false, chosen: null, block: null, lastDegree: null, autoTimer: null, unlocked: false, pendingAcc: null }).current;
+  const [levelUpOpen, setLevelUpOpen] = useState(false);
+  const st = useRef({ q: null, answered: false, chosen: null, block: null, lastDegree: null, autoTimer: null, deadline: null, unlocked: false, pendingAcc: null }).current;
   const session = useSession(settings.sessionLength || 10);
+  const mk = useMistakes('degrees', mode, mistakes); const mkRef = useRef(mk); mkRef.current = mk;
   const page = useExercise({ exercise: 'degrees', mode, levels: m => P.DEGREE_LEVELS[m], onReset: () => { st.block = null; next(false); } });
 
   function newQuestion() {
-    const lvl = page.levelDef(), mode = page.mode;
+    const p0 = page.prog(); const top = Math.max(p0.maxLevel || 1, p0.level);
+    const lvl = tonus ? page.levels()[Math.floor(Math.random() * top)] : page.levelDef(), mode = page.mode;  // тонус: случайный из пройденных уровней
     let tonicPc, playCadence = true;
     if (lvl.keyHint === 'block') {
       if (!st.block || st.block.remaining <= 0 || st.block.mode !== mode) st.block = { tonicPc: Math.floor(Math.random() * 12), remaining: lvl.blockSize, mode };
       else playCadence = false;
       tonicPc = st.block.tonicPc; st.block.remaining--;
     } else tonicPc = Math.floor(Math.random() * 12);
-    const label = weightedPick(lvl.degrees, l => (1 + 3 * page.errRate(l)) * (l === st.lastDegree ? 0.35 : 1));
+    let pool = lvl.degrees;
+    if (mkRef.current.on) { pool = [...new Set((mkRef.current.items || []).map(i => i.truth).filter(l => T.degreeByLabel(mode, l)))]; if (!pool.length) return null; }
+    const label = weightedPick(pool, l => (1 + 3 * page.errRate(l)) * (l === st.lastDegree && pool.length > 1 ? 0.35 : 1));
     st.lastDegree = label;
     const degree = T.degreeByLabel(mode, label);
     const midi = Math.max(48, Math.min(84, T.tonicMidi(tonicPc) + degree.st + 12 * pick(lvl.octaves)));
-    return { mode, tonicPc, degree, midi, timbre: page.timbre(lvl), playCadence, cadence: T.voiceLead(T.CADENCE[mode], mode, tonicPc) };
+    const q = { mode, tonicPc, degree, midi, timbre: page.timbre(lvl), playCadence, fast: !!lvl.fast, cadence: T.voiceLead(T.CADENCE[mode], mode, tonicPc) };
+    try { audio().warm(q.timbre, q.cadence.flatMap(c => c.notes).concat([midi])); } catch (e) { /* без звука на сервере */ }
+    return q;
   }
   function play(opts) {
     const q = st.q; if (!q) return;
     opts = opts || {}; st.unlocked = true;
     const e = audio(); let t = e.ctx.currentTime + 0.1;
+    // в темпе: каденция вдвое короче, нота сразу за ней, на ответ FAST_ANSWER секунд с момента ноты
+    const k = q.fast ? 0.5 : 1;
     if (q.playCadence && !opts.noteOnly) {
-      q.cadence.forEach((c, i) => { const d = i === q.cadence.length - 1 ? 1.0 : 0.65; e.playChord(q.timbre, c.notes, t, d); t += d; });
-      t += 0.55;
+      q.cadence.forEach((c, i) => { const d = (i === q.cadence.length - 1 ? 1.0 : 0.65) * k; e.playChord(q.timbre, c.notes, t, d); t += d; });
+      t += 0.55 * k;
     }
-    e.playNote(q.timbre, q.midi, t, 1.4, 0.5);
+    e.playNote(q.timbre, q.midi, t, q.fast ? 1.0 : 1.4, 0.5);
+    if (q.fast && !st.deadline && !st.answered) st.deadline = setTimeout(() => fns.current.answer(null), (t - e.ctx.currentTime + P.FAST_ANSWER) * 1000);
   }
   function playResolution() {
     const q = st.q; const e = audio();
@@ -58,21 +72,23 @@ export default function DegreesExercise({ mode }) {
   }
   function answer(label) {
     const q = st.q; if (!q || st.answered) return;
-    st.answered = true; st.chosen = label;
+    clearTimeout(st.deadline); st.deadline = null;
+    st.answered = true; st.chosen = label;  // label === null — не успели ответить в темпе
     const correct = label === q.degree.label;
-    page.recordConfusion(q.degree.label, label);
-    const levelUp = page.recordResult(correct); session.push(correct);
+    if (!tonus && label !== null) page.recordConfusion(q.degree.label, label);
+    const levelUp = tonus ? false : page.recordResult(correct); session.push(correct); if (levelUp) setLevelUpOpen(true);
+    if (correct && mkRef.current.on) mkRef.current.remove(i => i.truth === label);
     logAnswer({ exercise: 'degrees', mode: q.mode, level: page.prog().level, correct, answer: label, truth: q.degree.label });
     rerender();
     if (!levelUp && store.autoNext) { clearTimeout(st.autoTimer); st.autoTimer = setTimeout(next, correct ? 1400 : 3200); }
   }
   function next(autoplay) {
-    clearTimeout(st.autoTimer); session.nextIfDone();
+    clearTimeout(st.autoTimer); clearTimeout(st.deadline); st.deadline = null; session.nextIfDone();
     st.q = newQuestion(); st.answered = false; st.chosen = null; rerender();
     if (autoplay !== false && st.unlocked) play();
   }
   const fns = useRef(null); fns.current = { next, play, answer };
-  useEffect(() => { fns.current.next(false); return () => clearTimeout(st.autoTimer); }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (mistakes && !mk.loaded) return; fns.current.next(false); return () => { clearTimeout(st.autoTimer); clearTimeout(st.deadline); }; }, [mode, mistakes, tonus, mk.loaded]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const onKey = ev => {
       if (/^(SELECT|INPUT)$/.test(ev.target.tagName)) return;
@@ -99,21 +115,24 @@ export default function DegreesExercise({ mode }) {
   const correct = answered && st.chosen === q.degree.label;
   return (
     <>
-      <SessionStrip session={session} noun="Вопрос" active={!!q} right={<SettingsPopover ctx={page} showTimbre />} />
-      <section className="stage-mid">
+      <SessionStrip session={session} noun="Вопрос" active={!!q} idle={mistakes && mk.loaded && !q} note={mistakes ? 'работа над ошибками' : tonus ? 'тонус' : null} right={<><MistakesBadge exercise="degrees" mode={mode} level={page.prog().level} href={'/degrees?mode=' + mode + '&mistakes=1'} on={!!mistakes} /><HelpPopover exercise="degrees" /><SettingsPopover ctx={page} showTimbre mistakes={{ on: !!mistakes, count: mk.count, tonus: !!tonus }} /></>} />
+      {!mistakes && !tonus && <LevelPath levels={page.levels()} level={page.prog().level} maxLevel={page.prog().maxLevel} history={(page.prog().byLevel || {})[Math.max(page.prog().maxLevel || 1, page.prog().level)] || page.prog().history} W={settings.levelUpWindow || 20} NEED={settings.levelUpNeed || 16} onSelect={n => page.setLevel(n)} collapsible />}
+      {levelUpOpen && <LevelUpBanner ctx={page} onClose={() => setLevelUpOpen(false)} />}
+      {mistakes && mk.loaded && !q && <MistakesEmpty href={'/degrees?mode=' + mode} />}
+      <section className="stage-mid" hidden={mistakes && mk.loaded && !q}>
         <div className="actions">
           <button className="btn primary" onClick={() => play()}>Слушать</button>
           {q && q.playCadence && <button className="link" onClick={() => play({ noteOnly: true })}>только нота</button>}
         </div>
-        <div className="part-line">Какая ступень звучит после каденции?</div>
+        <div className="part-line">{q && q.fast ? `Какая ступень? Ответ в течение ${P.FAST_ANSWER} секунд после ноты` : 'Какая ступень звучит после каденции?'}</div>
         <div className="keys">
           {keys.map(label => (
             <button key={label} className={'key' + (/[♭♯♮]/.test(label) ? ' chrom' : '') + (answered && label === q.degree.label ? ' correct' : '') + (answered && label === st.chosen && label !== q.degree.label ? ' wrong' : '')} disabled={answered} onClick={() => answer(label)}>{label}</button>
           ))}
         </div>
-        {answered && <div className="actions"><button className="btn primary" onClick={() => next()}>Дальше</button></div>}
+        {answered && <div className="actions" id="nextActions"><button className="btn primary" onClick={() => next()}>Дальше</button></div>}
         <div className={'feedback' + (answered ? ' show ' + (correct ? 'ok' : 'bad') : '')}>
-          {answered && <div className="lead"><b>{correct ? 'Верно.' : 'Нет.'}</b> <span className="roman">{q.degree.label}</span>, {T.NOTE_NAMES[q.midi % 12]} в {T.keyName(q.mode, q.tonicPc)}. <button className="link" onClick={playResolution}>разрешение</button></div>}
+          {answered && <div className="lead"><b>{correct ? 'Верно.' : st.chosen === null ? 'Не успели.' : 'Нет.'}</b> <span className="roman">{q.degree.label}</span>, {T.NOTE_NAMES[q.midi % 12]} в {T.keyName(q.mode, q.tonicPc)}. <button className="link" onClick={playResolution}>разрешение</button></div>}
         </div>
       </section>
     </>

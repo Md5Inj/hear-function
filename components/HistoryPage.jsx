@@ -4,16 +4,17 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Songs from '@/lib/songs-db';
 import P from '@/lib/progressions';
+import IV from '@/lib/intervals';
 import { useApp } from './AppProvider';
 import { confirmPop } from './ui';
 
-const TABS = [['degrees', 'Ступени'], ['progressions', 'Прогрессии'], ['songs', 'Аккорды песен'], ['melodies', 'Мелодии песен']];
-const NOTES = { songs: 'Песни, которые вы уже проходили. Они не показываются повторно, пока не убраны из истории: по одной крестиком или целиком кнопками выше.', melodies: 'Песни, которые вы уже проходили. Они не показываются повторно, пока не убраны из истории: по одной крестиком или целиком кнопками выше.', degrees: 'Ваши ответы в упражнении «Ступени»: по ладу и уровню, последние сверху.', progressions: 'Ваши ответы в упражнении «Прогрессии»: по ладу и уровню, последние сверху.' };
+const TABS = [['degrees', 'Ступени'], ['intervals', 'Интервалы'], ['progressions', 'Прогрессии'], ['songs', 'Аккорды песен'], ['melodies', 'Мелодии песен']];
+const NOTES = { songs: 'Песни, которые вы уже проходили. Они не показываются повторно, пока не убраны из истории: по одной крестиком или целиком кнопками выше.', melodies: 'Песни, которые вы уже проходили. Они не показываются повторно, пока не убраны из истории: по одной крестиком или целиком кнопками выше.', degrees: 'Ваши ответы в упражнении «Ступени»: по ладу и уровню, последние сверху.', progressions: 'Ваши ответы в упражнении «Прогрессии»: по ладу и уровню, последние сверху.', intervals: 'Ваши ответы в упражнении «Интервалы»: по уровню, последние сверху.' };
 const fmt = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); };
 const fmtAns = a => Array.isArray(a) ? a.map(x => x == null || x === '' ? '?' : x).join(' – ') : (a == null ? '' : String(a));
 const modeName = m => m === 'major' ? 'Мажор' : 'Минор';
 function levelTitle(ex, mode, level) {
-  const L = ex === 'degrees' ? P.DEGREE_LEVELS : ex === 'progressions' ? P.PROG_LEVELS : Songs.SONG_LEVELS;
+  const L = ex === 'degrees' ? P.DEGREE_LEVELS : ex === 'progressions' ? P.PROG_LEVELS : ex === 'intervals' ? { major: IV.LEVELS, minor: IV.LEVELS } : Songs.SONG_LEVELS;
   const l = L[mode] && L[mode][level - 1]; return l ? `Уровень ${level}: ${l.title}` : 'Без уровня';
 }
 
@@ -28,7 +29,7 @@ export default function HistoryPage({ initialSeen }) {
   const list = isSong ? seen.filter(i => i.exercise === ex) : (answers[ex] || []);
   const groups = new Map();
   list.forEach(i => {
-    const key = ex === 'melodies' ? modeName(i.mode) : `${modeName(i.mode)} · ${levelTitle(ex, i.mode, i.level)}`;
+    const key = ex === 'melodies' ? modeName(i.mode) : ex === 'intervals' ? levelTitle(ex, i.mode, i.level) : `${modeName(i.mode)} · ${levelTitle(ex, i.mode, i.level)}`;
     if (!groups.has(key)) groups.set(key, []); groups.get(key).push(i);
   });
   const entries = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0], 'ru', { numeric: true }));

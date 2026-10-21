@@ -2,7 +2,10 @@
 /* Полоса серии (сколько сделано / текущий / осталось, верно и ошибок) и попап настроек за шестерёнкой. */
 import { useEffect, useRef, useState } from 'react';
 import Synth from '@/lib/synth';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useApp } from './AppProvider';
+import LevelPath from './LevelPath';
 
 export function useSession(n) {
   const [results, setResults] = useState([]);
@@ -16,6 +19,7 @@ export function useSession(n) {
 
 /* idle: вопроса нет (уровень пуст или пройден) — остаются только настройки */
 export function SessionStrip({ session, noun, active, right, note, idle }) {
+  // note: подпись справа от счётчика (например, «работа над ошибками»)
   const { n, results } = session;
   const good = results.filter(Boolean).length, bad = results.length - good;
   return (
@@ -32,8 +36,8 @@ export function SessionStrip({ session, noun, active, right, note, idle }) {
 }
 
 /* Шестерёнка и попап: уровни (всегда), тембр и автопереход (ступени и прогрессии). */
-export function SettingsPopover({ ctx, showTimbre, hidden }) {
-  const { store } = useApp();
+export function SettingsPopover({ ctx, showTimbre, hidden, mistakes }) {
+  const { store, settings } = useApp(); const path = usePathname();
   const [open, setOpen] = useState(false);
   const popRef = useRef(null);
   useEffect(() => {
@@ -54,14 +58,17 @@ export function SettingsPopover({ ctx, showTimbre, hidden }) {
         <div className="popover" ref={popRef}>
           <button className="modal-close" type="button" aria-label="Закрыть" onClick={() => setOpen(false)}>×</button>
           <div className="pop-row"><span className="pop-label">Уровень</span>
-            <div className="levels-list">
-              {ctx.levels().map((l, i) => (
-                <button key={i} className={'lvl-row' + (i + 1 === p.level ? ' active' : '')} onClick={() => ctx.setLevel(i + 1)}>
-                  <span className="num">{i + 1}</span><span><b>{l.title}</b><small>{l.desc}</small></span>
-                </button>
-              ))}
-            </div>
+            <LevelPath levels={ctx.levels()} level={p.level} maxLevel={p.maxLevel} history={(p.byLevel || {})[Math.max(p.maxLevel || 1, p.level)] || p.history || []} W={settings.levelUpWindow || 20} NEED={settings.levelUpNeed || 16} onSelect={n => { ctx.setLevel(n); setOpen(false); }} />
           </div>
+          {mistakes && (
+            <div className="pop-row"><span className="pop-label">Режим</span>
+              <div className="levels-list">
+                <Link className={'lvl-row' + (!mistakes.on ? ' active' : '')} href={path + '?mode=' + ctx.mode} onClick={() => setOpen(false)}><span className="num">•</span><span><b>Обычный</b><small>вопросы по уровню</small></span></Link>
+                <Link className={'lvl-row' + (mistakes.on ? ' active' : '')} href={path + '?mode=' + ctx.mode + '&mistakes=1'} onClick={() => setOpen(false)}><span className="num">!</span><span><b>Работа над ошибками</b><small>{mistakes.count == null ? 'то, что отвечено неверно' : mistakes.count ? `неисправленных: ${mistakes.count}` : 'ошибок нет'}</small></span></Link>
+                {mistakes.tonus != null && <Link className={'lvl-row' + (mistakes.tonus ? ' active' : '')} href={path + '?mode=' + ctx.mode + '&tonus=1'} onClick={() => setOpen(false)}><span className="num">∞</span><span><b>Тонус</b><small>{(p.maxLevel || p.level) > 1 ? `вперемешку с пройденных уровней 1–${p.maxLevel || p.level}, на уровни не влияет` : 'откроется, когда будет пройден первый уровень'}</small></span></Link>}
+              </div>
+            </div>
+          )}
           {showTimbre && (
             <>
               <div className="pop-row"><span className="pop-label">Тембр</span>

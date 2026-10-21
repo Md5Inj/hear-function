@@ -14,8 +14,8 @@ export function LandingCta() {
     if (store.user) { if (next) router.replace(next); else router.replace('/'); return; }
     openLogin(next);
   }, [wantLogin, next, store.user, openLogin, router]);
-  if (store.user) return <div className="landing-cta"><Link href="/songs" className="btn primary">Продолжить</Link><Link href="/history" className="btn quiet">История</Link></div>;
-  return <div className="landing-cta"><button className="btn primary" onClick={() => openLogin()}>Начать</button><a href="#how" className="btn quiet">Как это работает</a></div>;
+  if (store.user) return <div className="landing-cta"><Link href="/songs" className="btn primary">Продолжить</Link><Link href="/progress" className="btn quiet">Мой путь</Link><Link href="/history" className="btn quiet">История</Link></div>;
+  return <div className="landing-cta"><button className="btn primary" onClick={() => openLogin()}>Начать</button><Link href="/guide" className="btn quiet">Как пользоваться</Link></div>;
 }
 
 export function TermTip() {

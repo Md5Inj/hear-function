@@ -4,5 +4,6 @@ export const metadata = { title: 'Прогрессии — Тренажёр сл
 export default async function Page({ searchParams }) {
   const user = await requireUser('/progressions');
   const mode = await resolveMode(user, searchParams);
-  return <ProgressionsExercise mode={mode} />;
+  const sp = (await searchParams) || {};
+  return <ProgressionsExercise mode={mode} mistakes={sp.mistakes === '1'} tonus={sp.tonus === '1'} />;
 }
