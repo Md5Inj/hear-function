@@ -24,10 +24,10 @@ function applyState(store, state) {
   store.progress = state.progress || {}; store.seen = new Set(state.seen || []);
 }
 
-export default function AppProvider({ user, state, children }) {
+export default function AppProvider({ user, state, settings, children }) {
   const router = useRouter();
   const ref = useRef(null);
-  if (!ref.current) { ref.current = { user, mode: 'major', timbre: 'auto', autoNext: true, songAutoNext: false, progress: {}, seen: new Set(), songs: [], applied: null }; applyState(ref.current, state); ref.current.applied = state; ref.current.user = user; }
+  if (!ref.current) { ref.current = { user, mode: 'major', timbre: 'auto', autoNext: true, songAutoNext: false, progress: {}, seen: new Set(), songs: {}, applied: null }; applyState(ref.current, state); ref.current.applied = state; ref.current.user = user; }
   const store = ref.current;
   // новые данные с сервера (после входа / router.refresh) применяем поверх
   if (store.applied !== state) { applyState(store, state); store.applied = state; }
@@ -45,14 +45,15 @@ export default function AppProvider({ user, state, children }) {
       api('PUT', '/state', { settings: { mode: store.mode, timbre: store.timbre, autoNext: store.autoNext, songAutoNext: store.songAutoNext }, progress: store.progress }).catch(e => toast('Не удалось сохранить: ' + e.message));
     }, 400);
   }, [store]);
-  const logAnswer = useCallback(rec => { if (store.user) api('POST', '/answer', rec).catch(() => {}); if (rec.songId) store.seen.add(rec.songId); }, [store]);
+  const logAnswer = useCallback(rec => { if (store.user) api('POST', '/answer', rec).catch(() => {}); if (rec.songId) store.seen.add(rec.exercise + ':' + rec.songId); }, [store]);
   const engineRef = useRef(null);
   const audio = useCallback(() => { if (!engineRef.current) { const C = window.AudioContext || window.webkitAudioContext; engineRef.current = Synth.createEngine(new C()); } return engineRef.current; }, []);
-  const songsPromise = useRef(null);
-  const loadSongs = useCallback(() => {
-    if (store.songs.length) return Promise.resolve(store.songs);
-    if (!songsPromise.current) songsPromise.current = api('GET', '/songs').then(d => { store.songs = d.songs; songsPromise.current = null; return d.songs; });
-    return songsPromise.current;
+  /* корпус по видам: chords (все фрагменты) и melody (с вокальной фразой); кэш в store.songs[kind] */
+  const songsPromise = useRef({});
+  const loadSongs = useCallback((kind = 'chords') => {
+    if (store.songs[kind] && store.songs[kind].length) return Promise.resolve(store.songs[kind]);
+    if (!songsPromise.current[kind]) songsPromise.current[kind] = api('GET', '/songs?kind=' + kind).then(d => { store.songs[kind] = d.songs; songsPromise.current[kind] = null; return d.songs; });
+    return songsPromise.current[kind];
   }, [store]);
   const setUser = useCallback(u => { store.user = u; if (!u) { store.progress = {}; store.seen = new Set(); } refresh(); }, [store, refresh]);
   const logout = useCallback(async () => {
@@ -61,7 +62,7 @@ export default function AppProvider({ user, state, children }) {
   }, [setUser, router]);
   const openLogin = useCallback(next => setLogin({ next: next || null }), []);
 
-  const value = useMemo(() => ({ store, tick, refresh, api, save, logAnswer, audio, loadSongs, toast, pick, weightedPick, setUser, logout, openLogin, router }), [store, tick, refresh, save, logAnswer, audio, loadSongs, setUser, logout, openLogin, router]);
+  const value = useMemo(() => ({ store, tick, refresh, api, save, logAnswer, audio, loadSongs, toast, pick, weightedPick, setUser, logout, openLogin, router, settings: settings || {} }), [store, tick, refresh, save, logAnswer, audio, loadSongs, setUser, logout, openLogin, router, settings]);
   return (
     <Ctx.Provider value={value}>
       {children}

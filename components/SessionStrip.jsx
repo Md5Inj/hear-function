@@ -14,16 +14,17 @@ export function useSession(n) {
   };
 }
 
-export function SessionStrip({ session, noun, active, right, note }) {
+/* idle: вопроса нет (уровень пуст или пройден) — остаются только настройки */
+export function SessionStrip({ session, noun, active, right, note, idle }) {
   const { n, results } = session;
   const good = results.filter(Boolean).length, bad = results.length - good;
   return (
     <section className="session">
-      <div className="session-steps">
+      {!idle && <div className="session-steps">
         {Array.from({ length: n }, (_, i) => <i key={i} className={i < results.length ? (results[i] ? 'y' : 'n') : (i === results.length && active ? 'cur' : '')} />)}
-      </div>
+      </div>}
       <div className="session-text">
-        {active ? <>{noun} <b>{Math.min(results.length + 1, n)}</b> из {n} <span className="cnt ok" data-tip="Верно">{good}</span><span className="cnt bad" data-tip="Ошибок">{bad}</span>{note ? <span className="muted"> · {note}</span> : null}</> : `Серия из ${n}`}
+        {active ? <>{noun} <b>{Math.min(results.length + 1, n)}</b> из {n} <span className="cnt ok" data-tip="Верно">{good}</span><span className="cnt bad" data-tip="Ошибок">{bad}</span>{note ? <span className="muted"> · {note}</span> : null}</> : null}
       </div>
       <div className="session-settings">{right}</div>
     </section>

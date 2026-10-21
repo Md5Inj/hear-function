@@ -6,12 +6,13 @@ import P from '@/lib/progressions';
 import { useApp } from './AppProvider';
 import { useExercise } from './useExercise';
 import { useSession, SessionStrip, SettingsPopover } from './SessionStrip';
+import { toast } from './ui';
 
 export default function DegreesExercise({ mode }) {
-  const { store, audio, logAnswer, weightedPick, pick } = useApp();
+  const { store, audio, logAnswer, weightedPick, pick, settings } = useApp();
   const [, rerender] = useReducer(x => x + 1, 0);
-  const st = useRef({ q: null, answered: false, chosen: null, block: null, lastDegree: null, autoTimer: null, unlocked: false }).current;
-  const session = useSession(10);
+  const st = useRef({ q: null, answered: false, chosen: null, block: null, lastDegree: null, autoTimer: null, unlocked: false, pendingAcc: null }).current;
+  const session = useSession(settings.sessionLength || 10);
   const page = useExercise({ exercise: 'degrees', mode, levels: m => P.DEGREE_LEVELS[m], onReset: () => { st.block = null; next(false); } });
 
   function newQuestion() {
@@ -78,10 +79,15 @@ export default function DegreesExercise({ mode }) {
       const { next, play, answer } = fns.current;
       if (ev.key === 'Enter') { ev.preventDefault(); if (st.answered) next(); else play(); }
       else if (ev.key === 'r' || ev.key === 'к') { if (st.q) play(); }
+      else if ((ev.key === '-' || ev.key === 'b' || ev.key === 'и') && st.q && !st.answered) { st.pendingAcc = '♭'; }
+      else if ((ev.key === '+' || ev.key === '=' || ev.key === '#') && st.q && !st.answered) { st.pendingAcc = '♯'; }
       else if (/^[1-7]$/.test(ev.key) && st.q && !st.answered) {
-        const diat = page.mode === 'major' ? ['1', '2', '3', '4', '5', '6', '7'] : ['1', '2', '♭3', '4', '5', '♭6', '♭7'];
-        const label = diat[+ev.key - 1];
-        if (page.levelDef().degrees.includes(label)) answer(label);
+        // цифра — ступень лада; «-» или «+» перед цифрой — понижение или повышение
+        ev.preventDefault(); const d = +ev.key; const acc = st.pendingAcc; st.pendingAcc = null;
+        const semis = (T.SCALES[page.mode][d - 1] + (acc === '♭' ? -1 : acc === '♯' ? 1 : 0) + 12) % 12;
+        const deg = T.DEGREES[page.mode].find(x => x.st === semis);
+        if (!deg) return;
+        if (page.levelDef().degrees.includes(deg.label)) answer(deg.label); else toast(`Ступени ${deg.label} нет на этом уровне`);
       }
     };
     document.addEventListener('keydown', onKey); return () => document.removeEventListener('keydown', onKey);

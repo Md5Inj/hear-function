@@ -37,7 +37,7 @@ export default function HistoryPage({ initialSeen }) {
       <div className="hist-head">
         <h1>История</h1>
         <div className="hist-tools">
-          <button className="btn quiet mini" onClick={async ev => { if (!await confirmPop(ev.currentTarget, 'Очистить историю этого раздела?')) return; await api('DELETE', isSong ? '/seen?exercise=' + ex : '/answers?exercise=' + ex); if (isSong) { await reloadSeen(); store.seen = new Set([...store.seen].filter(id => !list.some(i => i.songId === id))); } else setAnswers(a => ({ ...a, [ex]: [] })); }}>Очистить этот список</button>
+          <button className="btn quiet mini" onClick={async ev => { if (!await confirmPop(ev.currentTarget, 'Очистить историю этого раздела?')) return; await api('DELETE', isSong ? '/seen?exercise=' + ex : '/answers?exercise=' + ex); if (isSong) { await reloadSeen(); store.seen = new Set([...store.seen].filter(k => !list.some(i => i.exercise + ':' + i.songId === k))); } else setAnswers(a => ({ ...a, [ex]: [] })); }}>Очистить этот список</button>
           <button className="btn quiet mini" onClick={async ev => { if (!await confirmPop(ev.currentTarget, 'Очистить всю историю?')) return; await api('DELETE', '/seen'); await api('DELETE', '/answers'); setAnswers({}); store.seen = new Set(); await reloadSeen(); }}>Очистить всё</button>
         </div>
       </div>
@@ -55,7 +55,7 @@ export default function HistoryPage({ initialSeen }) {
                 <span className="hist-artist">{i.artist || ''}</span>
                 <span className="hist-date">{fmt(i.at)}</span>
                 <Link className="btn quiet mini" href={(ex === 'melodies' ? '/melodies' : '/songs') + '?song=' + encodeURIComponent(i.songId)}>Пройти ещё раз</Link>
-                <button className="link hist-del" data-tip="Убрать из истории" onClick={async () => { await api('DELETE', '/seen/' + encodeURIComponent(i.id)); store.seen.delete(i.songId); setSeen(s => s.filter(x => x.id !== i.id)); }}>×</button>
+                <button className="link hist-del" data-tip="Убрать из истории" onClick={async () => { await api('DELETE', '/seen/' + encodeURIComponent(i.id)); store.seen.delete(i.exercise + ':' + i.songId); setSeen(s => s.filter(x => x.id !== i.id)); }}>×</button>
               </div>
             ) : (
               <div key={i.id} className="hist-row answers">

@@ -6,7 +6,8 @@ import { toast } from './ui';
 
 export function useExercise(cfg) {
   const app = useExerciseApp();
-  const { store, save, refresh, pick } = app;
+  const { store, save, refresh, pick, settings } = app;
+  const W = settings.levelUpWindow || 20, NEED = settings.levelUpNeed || 16;
   const mode = cfg.mode;
   // лад с сервера (адрес или сохранённый): сохраняем, если отличается от сохранённого
   useEffect(() => { if (store.mode !== mode) { store.mode = mode; save(); } }, [mode, store, save]);
@@ -27,9 +28,9 @@ export function useExercise(cfg) {
     ctx.recordResult = correct => {
       const p = ctx.prog();
       p.total++; if (correct) { p.correct++; p.streak++; p.best = Math.max(p.best, p.streak); } else p.streak = 0;
-      p.history.push(correct ? 1 : 0); if (p.history.length > 20) p.history.shift();
+      p.history.push(correct ? 1 : 0); if (p.history.length > W) p.history.shift();
       let levelUp = false;
-      if (p.history.length >= 20 && p.history.reduce((a, b) => a + b, 0) >= 16 && p.level < ctx.levels().length) { p.level++; p.history = []; levelUp = true; }
+      if (p.history.length >= W && p.history.reduce((a, b) => a + b, 0) >= NEED && p.level < ctx.levels().length) { p.level++; p.history = []; levelUp = true; }
       save(); refresh();
       if (levelUp) toast('Уровень ' + p.level + ': ' + ctx.levelDef().title);
       return levelUp;
@@ -40,6 +41,6 @@ export function useExercise(cfg) {
     ctx.setSongAutoNext = v => { store.songAutoNext = v; save(); refresh(); };
     ctx.reset = async () => { delete store.progress[cfg.exercise + '.' + mode]; await app.api('DELETE', '/progress?key=' + encodeURIComponent(cfg.exercise + '.' + mode)).catch(() => {}); refresh(); if (onReset.current) onReset.current(); };
     return ctx;
-  }, [cfg.exercise, mode, store, save, refresh, pick, app]);
+  }, [cfg.exercise, mode, store, save, refresh, pick, app, W, NEED]);
 }
 function useExerciseApp() { const app = useApp(); if (!app) throw new Error('useExercise вне AppProvider'); return app; }

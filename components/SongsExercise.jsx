@@ -29,19 +29,21 @@ function buildUnits(song) {
 }
 const advance = (slots, sel) => { const after = slots.findIndex((s, i) => !s && i > sel), any = slots.findIndex(s => !s); return after >= 0 ? after : any >= 0 ? any : Math.min(sel + 1, slots.length - 1); };
 
-export default function SongsExercise({ task, mode, forcedSong }) {
+export default function SongsExercise({ task, mode, forcedSong, review }) {
   const TASK = task; const isMel = TASK === 'melody';
-  const app = useApp(); const { store, audio, logAnswer, weightedPick, loadSongs } = app;
+  const R = review || null;  // режим проверки в админке: заданная песня, полный словарь, без прогресса и истории
+  const app = useApp(); const { store, audio, logAnswer, weightedPick, loadSongs, settings } = app;
   const router = useRouter();
   const [, rerender] = useReducer(x => x + 1, 0);
   const [loaded, setLoaded] = useState(false);
   const [ipWarning, setIpWarning] = useState(false);
-  const session = useSession(10);
+  const session = useSession(settings.sessionLength || 10);
   const page = useExercise({ exercise: isMel ? 'melodies' : 'songs', mode, levels: m => SB.SONG_LEVELS[m], onReset: () => next() });
-  const st = useRef({ q: null, answered: false, lastSong: null, autoTimer: null, played: false, cadenceTimer: null, chordSlots: [], melSlots: [], selChord: 0, selMel: 0, active: 'chords', anchor: null, loopOn: false, rate: 1, pendingAcc: null, loopRange: null, transport: false, playing: -1, melPlaying: false, unavailable: new Set(), forced: forcedSong || null }).current;
-  const sheetRef = useRef(null), chordsRef = useRef(null), trRef = useRef(null);
+  const st = useRef({ q: null, answered: false, lastSong: null, autoTimer: null, played: false, cadenceTimer: null, chordSlots: [], melSlots: [], selChord: 0, selMel: 0, active: 'chords', anchor: null, loopOn: false, rate: 1, pendingAcc: null, loopRange: null, transport: false, playing: -1, melPlaying: false, unavailable: new Set(), forced: forcedSong || null, repeat: false }).current;
+  const sheetRef = useRef(null), chordsRef = useRef(null), trRef = useRef(null), playerHost = useRef(null);
 
-  const allSongs = () => store.songs.map(s => { const e = SB.expand(s); e.level = SB.levelFor(e) || e.level; return e; }).filter(s => SB.levelFor(s));
+  const KIND = isMel ? 'melody' : 'chords';
+  const allSongs = () => (store.songs[KIND] || []).map(s => { const e = SB.expand(s); e.level = SB.levelFor(e) || e.level; return e; }).filter(s => SB.levelFor(s));
   const wantChords = () => !isMel;
   const wantMelody = s => TASK !== 'chords' && s.melody && s.melody.degrees.length;
   const seenKey = s => (isMel ? 'melodies' : 'songs') + ':' + s.id;
@@ -51,21 +53,27 @@ export default function SongsExercise({ task, mode, forcedSong }) {
     if (isMel) return allSongs().filter(s => fits(s));
     const L = page.prog().level, all = allSongs();
     let out = all.filter(s => fits(s, L));
-    for (let lvl = L - 1; lvl >= 1 && out.length < 8; lvl--) out = out.concat(all.filter(s => fits(s, lvl)));
+    for (let lvl = L - 1; lvl >= 1 && out.length < (settings.poolMin || 8); lvl--) out = out.concat(all.filter(s => fits(s, lvl)));
     return out;
   };
-  const pool = () => { const all = poolAll(); const fresh = all.filter(s => !store.seen.has(seenKey(s))); return fresh.length ? fresh : all; };
+  // пройденные песни не показываются; повтор только по явной кнопке «Повторить пройденные»
+  const pool = () => { const all = poolAll(); return st.repeat ? all : all.filter(s => !store.seen.has(seenKey(s))); };
   const allDone = () => { const all = poolAll(); return all.length > 0 && all.every(s => store.seen.has(seenKey(s))); };
 
   function newQuestion() {
+    if (R) {
+      const f = SB.expand(R.song); f.level = SB.levelFor(f) || f.level;
+      const lv = page.levels(); const vocab = (R.vocab === 'all' ? lv[lv.length - 1] : lv[Math.min(f.level, lv.length) - 1]).vocab.slice();
+      f.chords.forEach(c => { const sym = T.parseToken(c.c).symbol; if (!vocab.includes(sym)) vocab.push(sym); });
+      return { song: f, units: buildUnits(f), mode: f.key.mode, vocab, chords: wantChords(), melody: !!wantMelody(f) };
+    }
     let songs = pool();
     if (st.forced) {
-      const f = allSongs().find(s => s.id === st.forced); st.forced = null;
-      if (f) {
-        if (f.key.mode !== page.mode) { router.replace((isMel ? '/melodies' : '/songs') + '?mode=' + f.key.mode + '&song=' + encodeURIComponent(f.id)); return null; }
-        if (!isMel) { page.prog().level = f.level; app.save(); }
-        songs = [f];
-      }
+      const f = allSongs().find(s => s.id === st.forced);
+      // песня другого лада: переходим в её лад, запрос остаётся до следующего вопроса
+      if (f && f.key.mode !== page.mode) { router.replace((isMel ? '/melodies' : '/songs') + '?mode=' + f.key.mode + '&song=' + encodeURIComponent(f.id)); return null; }
+      st.forced = null;
+      if (f) { if (!isMel) { page.prog().level = f.level; app.save(); } songs = [f]; }
       window.history.replaceState(null, '', location.pathname);
     }
     if (!songs.length) return null;
@@ -120,8 +128,9 @@ export default function SongsExercise({ task, mode, forcedSong }) {
     const q = st.q; if (!q || st.answered || !complete()) return;
     st.answered = true; st.transport = false;
     let all = true;
-    if (q.chords) q.units.forEach((u, i) => { if (u.sym !== st.chordSlots[i]) all = false; page.recordConfusion(u.sym, st.chordSlots[i]); });
-    if (q.melody) q.song.melody.degrees.forEach((d, i) => { if (d !== st.melSlots[i]) all = false; page.recordConfusion('♪' + d, '♪' + st.melSlots[i]); });
+    if (q.chords) q.units.forEach((u, i) => { if (u.sym !== st.chordSlots[i]) all = false; if (!R) page.recordConfusion(u.sym, st.chordSlots[i]); });
+    if (q.melody) q.song.melody.degrees.forEach((d, i) => { if (d !== st.melSlots[i]) all = false; if (!R) page.recordConfusion('♪' + d, '♪' + st.melSlots[i]); });
+    if (R) { rerender(); R.onResult({ correct: all, answer: q.chords ? st.chordSlots.slice() : st.melSlots.slice(), truth: q.chords ? q.units.map(u => u.sym) : q.song.melody.degrees.slice() }); return; }
     const levelUp = page.recordResult(all);
     logAnswer({ exercise: isMel ? 'melodies' : 'songs', mode: q.mode, level: page.prog().level, songId: q.song.id, title: q.song.title, artist: q.song.artist, correct: all,
       answer: q.chords ? st.chordSlots.slice() : st.melSlots.slice(), truth: q.chords ? q.units.map(u => u.sym) : q.song.melody.degrees });
@@ -130,6 +139,7 @@ export default function SongsExercise({ task, mode, forcedSong }) {
   }
   function next() {
     clearTimeout(st.autoTimer); clearTimeout(st.cadenceTimer); Y.pause();
+    if (R && st.q && st.answered) { R.onNext(); return; }
     session.nextIfDone();
     st.q = newQuestion(); st.answered = false; st.transport = false; st.playing = -1; st.melPlaying = false;
     const q = st.q;
@@ -156,13 +166,17 @@ export default function SongsExercise({ task, mode, forcedSong }) {
     document.body.classList.add('dock'); document.body.dataset.task = TASK;
     if (/^\d+\.\d+\.\d+\.\d+$/.test(window.location.hostname)) setIpWarning(true);
     let alive = true;
-    loadSongs().then(() => { if (!alive) return; setLoaded(true); fns.current.next(); });
-    Y.create('player').then(() => { if (alive && st.q) Y.cue(st.q.song.youtube, st.q.song.start); });
+    if (R) { setLoaded(true); fns.current.next(); } else loadSongs(KIND).then(() => { if (!alive) return; setLoaded(true); fns.current.next(); });
+    // плеер живёт в своём элементе, который создаём на каждое монтирование: YouTube заменяет его iframe-ом и при destroy() не возвращает
+    const holder = document.createElement('div'); holder.id = 'yt-player-' + Math.random().toString(36).slice(2, 8);
+    if (playerHost.current) { playerHost.current.innerHTML = ''; playerHost.current.appendChild(holder); }
+    Y.create(holder.id).then(() => { if (alive && st.q) Y.cue(st.q.song.youtube, st.q.song.start); });
     Y.on('error', code => {
       const q = st.q; if (!q) return;
       st.unavailable.add(q.song.id);
-      toast(`Ролик не загрузился (${Y.ERRORS[code] || 'ошибка ' + code}), беру другую песню`);
-      app.api('POST', '/flag', { id: q.song.id, youtube: q.song.youtube, start: q.song.start, task: TASK, reason: 'unavailable', code, title: q.song.title, artist: q.song.artist }).catch(() => {});
+      const byIp = /^\d+\.\d+\.\d+\.\d+$/.test(window.location.hostname);
+      toast(byIp ? 'YouTube не играет по IP-адресу: откройте сайт через localhost' : `Ролик не загрузился (${Y.ERRORS[code] || 'ошибка ' + code}), беру другую песню`);
+      // песня пропускается только в этой сессии: ошибка ролика бывает временной и зависит от браузера, в базу ничего не пишем
       clearTimeout(st.autoTimer); st.autoTimer = setTimeout(() => fns.current.next(), 800);
     });
     const tick = setInterval(() => {
@@ -173,7 +187,7 @@ export default function SongsExercise({ task, mode, forcedSong }) {
       if (q.melody) { const m = q.song.melody; const on = t >= m.start && t < m.end; if (on !== st.melPlaying) { st.melPlaying = on; changed = true; } }
       if (changed) rerender();
     }, 60);
-    return () => { alive = false; clearInterval(tick); clearTimeout(st.autoTimer); clearTimeout(st.cadenceTimer); Y.destroy(); document.body.classList.remove('dock'); delete document.body.dataset.task; };
+    return () => { alive = false; clearInterval(tick); clearTimeout(st.autoTimer); clearTimeout(st.cadenceTimer); Y.destroy(); if (playerHost.current) playerHost.current.innerHTML = ''; document.body.classList.remove('dock'); delete document.body.dataset.task; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   /* смена лада из меню: новый вопрос */
   const firstMode = useRef(mode);
@@ -250,6 +264,7 @@ export default function SongsExercise({ task, mode, forcedSong }) {
   if (q && q.chords) q.units.forEach((u, i) => { if (u.barStart && (!row || barsInRow >= 4)) { row = []; rows.push(row); barsInRow = 0; } if (u.barStart) barsInRow++; if (!row) { row = []; rows.push(row); } row.push(i); });
   const groups = [[], [], []]; if (q && q.chords) q.vocab.forEach(sym => groups[isChrom(sym, q.mode) ? 2 : /7|ø|sus/.test(sym) ? 1 : 0].push(sym));
   const empty = loaded && !q;
+  const exhausted = !R && empty && allDone();  // песни уровня есть, но все пройдены
   let where = '';
   if (empty) { const counts = {}; allSongs().filter(x => (!isMel || (x.melody && x.melody.degrees.length))).forEach(x => { const k = (x.key.mode === 'major' ? 'мажор' : 'минор') + (isMel ? '' : ' ' + x.level); counts[k] = (counts[k] || 0) + 1; }); where = Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0], 'ru', { numeric: true })).map(([k, n]) => `${k}: ${n}`).join(', '); }
 
@@ -275,11 +290,18 @@ export default function SongsExercise({ task, mode, forcedSong }) {
 
   return (
     <>
-      <SessionStrip session={session} noun="Песня" active={!!q} note={q && allDone() ? 'все песни уровня уже пройдены, идут повторно' : null} right={<SettingsPopover ctx={page} hidden={isMel} />} />
+      {!R && <SessionStrip session={session} noun="Песня" active={!!q} idle={loaded && !q} note={q && st.repeat && allDone() ? 'повтор пройденных' : null} right={<SettingsPopover ctx={page} hidden={isMel} />} />}
       <section className="stage-mid">
-        {ipWarning && <div className="qinfo"><span style={{ color: 'var(--bad)' }}>YouTube не играет музыку со страниц, открытых по IP-адресу. Откройте сайт через localhost.</span></div>}
+        {ipWarning && <div className="qinfo"><div className="empty-state"><div className="lead">YouTube не играет музыку со страниц, открытых по IP-адресу.</div><div className="meta">Откройте сайт через <a href={'http://localhost:' + window.location.port + window.location.pathname}>localhost</a>: по IP каждый ролик будет заканчиваться ошибкой.</div></div></div>}
         {!loaded && <div className="skeleton"><div className="sk-row" /><div className="sk-chips"><i /><i /><i /><i /><i /></div><div className="sk-btn" /></div>}
-        {empty && <div className="qinfo"><div className="empty-state"><div className="lead">{isMel ? 'Для этого лада мелодий пока нет.' : 'Для этого лада и уровня песен пока нет.'}</div><div className="meta">{where ? 'Есть: ' + where + '. Лад меняется в меню, уровень в настройках (шестерёнка).' : 'Корпус ещё пополняется.'}</div></div></div>}
+        {exhausted && (
+          <div className="qinfo"><div className="empty-state">
+            <div className="lead">{isMel ? 'Все мелодии этого лада пройдены.' : 'Все песни этого уровня пройдены.'}</div>
+            <div className="meta">Новые песни добавляются в корпус. Другой уровень выбирается в настройках (шестерёнка).</div>
+            <div className="actions" style={{ marginTop: 16 }}><button className="btn primary" onClick={() => { st.repeat = true; next(); }}>Повторить пройденные</button></div>
+          </div></div>
+        )}
+        {!R && empty && !exhausted && <div className="qinfo"><div className="empty-state"><div className="lead">{isMel ? 'Для этого лада мелодий пока нет.' : 'Для этого лада и уровня песен пока нет.'}</div><div className="meta">{where ? 'Есть: ' + where + '. Лад меняется в меню, уровень в настройках (шестерёнка).' : 'Корпус ещё пополняется.'}</div></div></div>}
         {q && q.chords && (
           <div id="chordsBlock" ref={chordsRef}>
             <div className="sheet-wrap"><div className="sheet rows" ref={sheetRef}>{rows.map((r, ri) => <div key={ri} className="sheet-row">{r.map(i => slot(i, false))}</div>)}</div></div>
@@ -302,15 +324,15 @@ export default function SongsExercise({ task, mode, forcedSong }) {
         )}
         {q && q.melody && (
           <div id="melodyBlock" className={st.melPlaying ? 'playing' : ''}>
-            <div className="part-line"><span>{s.melody.lyric ? `Ступень каждой ноты фразы «${s.melody.lyric}»` : 'Ступень каждой ноты фразы'}</span> {!isMel && <button className="link" onClick={playPhrase}>слушать фразу</button>}</div>
+            {!isMel && <div className="part-line"><button className="link" onClick={playPhrase}>слушать фразу</button></div>}
             <div className="sheet-wrap"><div className="sheet notes rows">{Array.from({ length: Math.ceil(s.melody.degrees.length / 4) }, (_, ri) => <div key={ri} className="sheet-row">{s.melody.degrees.slice(ri * 4, ri * 4 + 4).map((d, j) => slot(ri * 4 + j, true))}</div>)}</div></div>
             <div className="keys">{T.DEGREES[q.mode].map(d => <button key={d.label} className={'key small' + (/[♭♯♮]/.test(d.label) ? ' chrom' : '')} disabled={answered} onClick={() => fillMel(d.label)}>{d.label}</button>)}</div>
           </div>
         )}
         {q && (
-          <div className="actions">
+          <div className="actions" id="answerActions">
             {!answered && <button className="btn primary" disabled={!complete()} onClick={check}>Проверить</button>}
-            {answered && <button className="btn primary" onClick={next}>Дальше</button>}
+            {answered && <button className="btn primary" onClick={next}>{R ? 'Следующая' : 'Дальше'}</button>}
             {answered && !all && <button className="btn" onClick={retry}>Исправить</button>}
           </div>
         )}
@@ -326,7 +348,7 @@ export default function SongsExercise({ task, mode, forcedSong }) {
       </section>
       <div className="dockbar" hidden={!q}>
         <div className="dock-inner">
-          <div className="player dock-player"><div id="player" /></div>
+          <div className="player dock-player" ref={playerHost} />
           <div className="dock-info">
             <div className="song-title"><span>{s ? s.title : ''}</span> <span className="info up" tabIndex={0}>?<span className="tip">{s ? (isMel && s.melody ? `Фраза ${fmt(s.melody.start)}–${fmt(s.melody.end)}, ${s.melody.degrees.length} нот. «Слушать»: каденция в тональности песни, затем фраза. Ответ: ступень каждой ноты по порядку.` : `Фрагмент ${fmt(s.start)}–${fmt(s.end)}, ${q.units.filter(u => u.barStart).length} тактов. «Слушать»: каденция в тональности песни, затем запись. Клик по такту играет только его. Знак % повторяет аккорд предыдущего такта.`) : ''}</span></span></div>
             <div className="song-meta">{s ? s.artist + (s.section ? ', ' + s.section.replace(/^(\S)/, m => m.toLowerCase()) : '') : ''}</div>

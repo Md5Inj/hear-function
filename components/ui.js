@@ -52,3 +52,13 @@ export function weightedPick(arr, weight) {
   for (let i = 0; i < arr.length; i++) { r -= w[i]; if (r <= 0) return arr[i]; }
   return arr[arr.length - 1];
 }
+
+/* Параметры в адресе без перезагрузки: обновление страницы и «назад» возвращают к тому же месту */
+export function getQuery() { return typeof window === 'undefined' ? new URLSearchParams() : new URLSearchParams(window.location.search); }
+export function setQuery(patch, push) {
+  const q = getQuery();
+  Object.entries(patch).forEach(([k, v]) => { if (v == null || v === '') q.delete(k); else q.set(k, String(v)); });
+  const url = window.location.pathname + (q.toString() ? '?' + q.toString() : '');
+  if (url === window.location.pathname + window.location.search) return;
+  (push ? window.history.pushState : window.history.replaceState).call(window.history, null, '', url);
+}

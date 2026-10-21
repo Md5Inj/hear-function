@@ -2,7 +2,8 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import Songs from '@/lib/songs-db';
 import P from '@/lib/progressions';
-import { loadCorpus } from '@/lib/corpus';
+import { chordSongs, melodySongs } from '@/lib/corpus';
+import { getStore } from '@/lib/db';
 import { currentState } from '@/lib/session';
 import { LandingCta, TermTip } from '@/components/Landing';
 
@@ -13,8 +14,8 @@ function status(progress, exercise, levels) {
   return ['major', 'minor'].map(mode => { const p = progress[exercise + '.' + mode]; if (!p || !p.total) return null; return (mode === 'major' ? 'мажор' : 'минор') + ': уровень ' + p.level + ' из ' + levels[mode].length; }).filter(Boolean);
 }
 export default async function Home() {
-  const songs = loadCorpus();
-  const chords = songs.filter(s => Songs.levelFor(s)), melodies = songs.filter(s => s.melody && s.melody.degrees.length);
+  const store = getStore();
+  const chords = (await chordSongs(store)).filter(s => Songs.levelFor(s)), melodies = await melodySongs(store);
   const uniq = arr => new Set(arr.map(s => s.artist + ' — ' + s.title)).size;
   const byMode = (arr, m) => arr.filter(s => s.key.mode === m).length;
   const state = await currentState(); const progress = (state && state.progress) || {};

@@ -6,14 +6,15 @@ import P from '@/lib/progressions';
 import { useApp } from './AppProvider';
 import { useExercise } from './useExercise';
 import { useSession, SessionStrip, SettingsPopover } from './SessionStrip';
+import { toast } from './ui';
 
 const isChrom = (sym, mode) => /\//.test(sym) || /^♭/.test(sym) || sym === 'N' || (mode === 'minor' && sym === 'I') || (mode === 'major' && sym === 'iv') || sym === 'vii°7';
 
 export default function ProgressionsExercise({ mode }) {
-  const { store, audio, logAnswer, weightedPick } = useApp();
+  const { store, audio, logAnswer, weightedPick, settings } = useApp();
   const [, rerender] = useReducer(x => x + 1, 0);
-  const st = useRef({ q: null, answered: false, slots: [], sel: 0, lastEntry: null, autoTimer: null, unlocked: false }).current;
-  const session = useSession(10);
+  const st = useRef({ q: null, answered: false, slots: [], sel: 0, lastEntry: null, autoTimer: null, unlocked: false, pendingAcc: null }).current;
+  const session = useSession(settings.sessionLength || 10);
   const page = useExercise({ exercise: 'progressions', mode, levels: m => P.PROG_LEVELS[m], onReset: () => next(false) });
 
   function newQuestion() {
@@ -62,7 +63,7 @@ export default function ProgressionsExercise({ mode }) {
     st.slots = st.slots.map((v, i) => v === T.parseToken(q.chords[i]).symbol ? v : null); st.sel = Math.max(0, st.slots.findIndex(v => !v));
     rerender();
   }
-  const fns = useRef(null); fns.current = { next, play, check, playChord };
+  const fns = useRef(null); fns.current = { next, play, check, playChord, fill };
   useEffect(() => { fns.current.next(false); return () => clearTimeout(st.autoTimer); }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const onKey = ev => {
@@ -72,11 +73,20 @@ export default function ProgressionsExercise({ mode }) {
       else if (ev.key === 'r' || ev.key === 'к') { if (st.q) play(); }
       else if (ev.key === ' ' && st.q) { ev.preventDefault(); playChord(st.sel); }
       else if (ev.key === 'Backspace' && st.q && !st.answered) { ev.preventDefault(); st.slots[st.sel] = null; rerender(); }
+      else if ((ev.key === '-' || ev.key === 'b' || ev.key === 'и') && st.q && !st.answered) { st.pendingAcc = '♭'; }
+      else if (/^[1-7]$/.test(ev.key) && st.q && !st.answered) {
+        // цифра — диатонический аккорд ступени; «-» перед цифрой — аккорд на пониженной ступени (♭III, ♭VI, ♭VII)
+        ev.preventDefault(); const d = +ev.key; const acc = st.pendingAcc; st.pendingAcc = null;
+        const diat = st.q.mode === 'major' ? ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'] : ['i', 'ii°', 'III', 'iv', 'V', 'VI', 'VII'];
+        const flat = ['', 'N', '♭III', '', '', '♭VI', '♭VII'];
+        const sym = acc === '♭' ? flat[d - 1] : diat[d - 1];
+        if (sym && page.levelDef().vocab.includes(sym)) fns.current.fill(sym); else toast(`${sym || 'Такого аккорда'} нет среди вариантов этого уровня`);
+      }
       else if (ev.key === 'ArrowLeft' && st.q && !st.answered) { st.sel = Math.max(0, st.sel - 1); rerender(); }
       else if (ev.key === 'ArrowRight' && st.q && !st.answered) { st.sel = Math.min(st.slots.length - 1, st.sel + 1); rerender(); }
     };
     document.addEventListener('keydown', onKey); return () => document.removeEventListener('keydown', onKey);
-  }, [st]);
+  }, [st, page]);
 
   const q = st.q, answered = st.answered, slots = st.slots;
   const groups = [[], [], []];
