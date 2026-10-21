@@ -5,11 +5,12 @@ import json, sys, re, collections
 paths = sys.argv[1].split(','); per_song = int(sys.argv[2]) if len(sys.argv) > 2 else 2; per_bucket = int(sys.argv[3]) if len(sys.argv) > 3 else 150
 melody_path = sys.argv[4] if len(sys.argv) > 4 else None  # melodies.jsonl из tools/melody.py
 cand_paths = sys.argv[5].split(',') if len(sys.argv) > 5 else []  # актуальные кандидаты: фрагменты, выпавшие из них, не экспортируем
+verified_path = sys.argv[6] if len(sys.argv) > 6 else None  # tools/verify.py: фрагменты, не прошедшие проверку по тактам, не экспортируем
 import os
 recs = [json.loads(l) for p in paths if os.path.exists(p) for l in open(p, encoding='utf-8')]
 LIVE = re.compile(r'[(\[][^)\]]*\b(live|karaoke|cover|remix|instrumental|demo|rehearsal|acoustic|unplugged|lyric|lyrics)\b[^)\]]*[)\]]|\blive (at|from|in|on)\b|\s[-–]\s*live\b', re.I)
 ok = [r for r in recs if r['ok'] and not LIVE.search(r.get('ytTitle', ''))]
-ok = [r for r in ok if max(c['beats'] for c in r['chords']) <= 2 * r['beatsPerBar']]
+ok = [r for r in ok if max(c['beats'] for c in r['chords']) <= 2 * r['beatsPerBar'] and r['start'] >= 0]
 # отметки «разметка неверна» со страниц (flags.jsonl рядом с проектом)
 flagged = set(); flagged_ids = set()
 if os.path.exists('flags.jsonl'):
@@ -20,10 +21,61 @@ if os.path.exists('flags.jsonl'):
 if os.path.exists('data/db.json'):
     try:
         for f in json.load(open('data/db.json', encoding='utf-8')).get('flags', {}).values():
+            if f.get('reason') == 'unavailable': continue  # автоматические отметки плеера не скрывают песни
             if f.get('songId'): flagged_ids.add(f['songId'])
             if f.get('youtube') and f.get('start') is not None: flagged.add((f['youtube'], round(float(f['start']), 2)))
     except Exception: pass
 ok = [r for r in ok if (r['youtube'], round(r['start'], 2)) not in flagged]
+# проверка по тактам (tools/verify.py): вердикт пересчитываем по сохранённым оценкам тактов текущим правилом (tools/chordroot.py)
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))
+from chordroot import bar_ok
+verified = {}; n_verified = 0
+if verified_path and os.path.exists(verified_path):
+    for l in open(verified_path, encoding='utf-8'):
+        try: d = json.loads(l)
+        except Exception: continue
+        if d.get('ok') is None: continue
+        n_verified += 1; verified[(d['youtube'], round(float(d['start']), 2))] = d
+from billboard2songs import MAJOR_MAP, MINOR_MAP
+import subprocess as _sp
+try: _LADDER = json.loads(_sp.run(['node', 'tools/dump-vocab.js'], capture_output=True, text=True).stdout)
+except Exception: _LADDER = None
+_VOCAB = {m: set(_LADDER[m][-1]['vocab']) for m in ('major', 'minor')} if _LADDER else None
+from chordroot import NOTE as NOTE_NAMES
+def symbol_of(best, mode, tonic):
+    """Лучшее трезвучие по записи ('E', 'C#m') -> римский символ в тональности или None."""
+    minor = best.endswith('m'); root = NOTE_NAMES.index(best.rstrip('m'))
+    sym = (MAJOR_MAP if mode == 'major' else MINOR_MAP).get(((root - tonic) % 12, 'min' if minor else 'maj'))
+    if sym and _VOCAB and sym not in _VOCAB[mode]: return None  # аккорда нет в лестнице уровней — чинить нечем
+    return sym
+n_fixed = 0
+def fix_or_pass(r):
+    """Проверка по тактам: совпадающие такты оставляем, расходящиеся исправляем по записи; если исправить нельзя — фрагмент выпадает."""
+    global n_fixed
+    d = verified.get((r['youtube'], round(r['start'], 2)))
+    if not d: return r  # ещё не проверен
+    if d.get('tempoOk') is False: return None  # темп фрагмента не согласуется с записью: сетка тактов ложная, чинить нечего
+    # Billboard размечен экспертами с таймингами — ему верим больше, чем хроме (надстройки вроде G/9 хрома путает с соседними трезвучиями)
+    if not str(r['bb']).startswith('ch'): return r
+    bars = d.get('bars') or []
+    if not bars or len(bars) != len(r['chords']): return r if d.get('ok') else None
+    chords = []; changed = False
+    for b, c in zip(bars, r['chords']):
+        if bar_ok(b, r['mode'], r['tonic']): chords.append(dict(c)); continue
+        if b[1] == '?': return None
+        sym = symbol_of(b[1], r['mode'], r['tonic'])
+        if sym is None: return None  # аккорд вне тональности: разметку не чиним
+        chords.append({'c': sym, 'beats': c['beats']}); changed = True
+    if len({c['c'].split(':')[0] for c in chords}) < 2: return None  # один аккорд на весь фрагмент — не упражнение
+    if changed:
+        merged = []
+        for c in chords:
+            if merged and merged[-1]['c'] == c['c']: merged[-1]['beats'] += c['beats']
+            else: merged.append(dict(c))
+        r = dict(r); r['_origChords'] = r['chords']; r['chords'] = merged; r['fixed'] = True; n_fixed += 1  # ключ кандидата считаем по исходной разметке
+    return r
+n_before = len(ok); ok = [x for x in (fix_or_pass(r) for r in ok) if x]; n_bad = n_before - len(ok)
+print('verified:', n_verified, 'fixed by recording:', n_fixed, 'rejected:', n_bad, file=sys.stderr)
 if cand_paths:
     import os as _os
     valid = set()
@@ -32,7 +84,7 @@ if cand_paths:
         for f in json.load(open(cp, encoding='utf-8')):
             valid.add((f['bb'], f['mode'], f['section'], tuple((c['c'], round(c['beats'], 3)) for c in f['chords'])))
     # только окна из актуальных кандидатов — т.е. целые гармонические единицы (tools/units.py); вырезки из середины отпадают
-    ok = [r for r in ok if (r['bb'], r['mode'], r['section'], tuple((c['c'], round(c['beats'], 3)) for c in r['chords'])) in valid]
+    ok = [r for r in ok if (r['bb'], r['mode'], r['section'], tuple((c['c'], round(c['beats'], 3)) for c in r.get('_origChords', r['chords']))) in valid]
 melodies = {}
 if melody_path and os.path.exists(melody_path):
     for l in open(melody_path, encoding='utf-8'):
@@ -100,7 +152,7 @@ for key, frs in songs_sorted:
         if not got: break
         rnd += 1
 def js_str(s): return "'" + s.replace('\\', '\\\\').replace("'", "\\'") + "'"
-id_count = collections.Counter()
+id_count = collections.Counter(); verify_rows = []
 lines = ['/* Автоматически сгенерировано tools/export-songs.py из аннотаций McGill Billboard (CC BY-NC-SA 4.0),',
          '   выровнено по записям YouTube tools/pipeline.py. Не редактировать руками: правки делайте в songs-db.js. */',
          'window.SongsAuto = [']
@@ -108,6 +160,7 @@ for r in sorted(out, key=lambda r: (r['mode'], r['level'], r['artist'], r['title
     sid = '%s-%s' % (('bb-' + r['bb']) if not r['bb'].startswith('ch') else r['bb'], re.sub(r'[^a-z0-9]+', '-', (r['section'] or 'x').lower()).strip('-'))
     id_count[sid] += 1
     if id_count[sid] > 1: sid += '-%d' % id_count[sid]
+    verify_rows.append(dict(id=sid, youtube=r['youtube'], start=round(r['start'], 2), bpm=r['bpm'], beatsPerBar=r['beatsPerBar'], key=dict(tonic=r['tonic'], mode=r['mode']), level=r['_lvl'], chords=[{'c': c['c'], 'beats': c['beats']} for c in r.get('_origChords', r['chords'])], bb=r['bb']))
     chords = ', '.join('{ c: %s%s }' % (js_str(c['c']), '' if c['beats'] == r['beatsPerBar'] else ', beats: %g' % c['beats']) for c in r['chords'])
     bpb = '' if r['beatsPerBar'] == 4 else ', beatsPerBar: %d' % r['beatsPerBar']
     m = mel_for(r)
@@ -118,3 +171,4 @@ lines.append('];')
 # корпус как ES-модуль приложения
 esm = [lines[0], lines[1], 'const SongsAuto = ['] + lines[3:] + ['export default SongsAuto;']
 open('lib/songs-data.js', 'w', encoding='utf-8').write('\n'.join(esm) + '\n')
+os.makedirs('data', exist_ok=True); json.dump(verify_rows, open('data/verify-corpus.json', 'w', encoding='utf-8'), ensure_ascii=False)  # для tools/verify.py: исходная разметка до исправлений

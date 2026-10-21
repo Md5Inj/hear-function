@@ -1,8 +1,8 @@
 // node tools/dump-vocab.js > vocab.json — лестница уровней песен: накопленный словарь и лимит тактов
 // node tools/dump-vocab.js chords > chords.json — таблицы аккордов для python
-const P = require('../progressions.js'); const S = require('../songs-db.js');
+const P = require('../lib/progressions.js'); const S = require('../lib/songs-db.js');
 if (process.argv[2] === 'chords') {
-  const T = require('../theory.js'); const o = {};
+  const T = require('../lib/theory.js'); const o = {};
   for (const m of ['major', 'minor']) { o[m] = {}; for (const [sym, d] of Object.entries(T.CHORDS[m])) o[m][sym] = { root: d.root, intervals: T.QUALITIES[d.q] }; }
   process.stdout.write(JSON.stringify(o));
 } else {

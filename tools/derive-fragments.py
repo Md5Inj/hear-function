@@ -14,7 +14,7 @@ ok_recs = [r for r in recs if r.get('ok') and not r.get('derived')]
 out = []; done_keys = set()
 def emit(f, a_start, a_bpm, src):
     k = key_of(f)
-    if k in have or k in done_keys: return
+    if k in have or k in done_keys or a_start < 0: return  # начало раньше нуля: единица начинается до старта ролика
     done_keys.add(k)
     out.append(dict(songKey=f['artist'] + ' — ' + f['title'], artist=f['artist'], title=f['title'], youtube=src['youtube'], ytTitle=src.get('ytTitle'), ytDur=src.get('ytDur'), expectedDur=src.get('expectedDur'), bb=f['bb'],
                     tonic=f['tonic'], mode=f['mode'], level=f['level'], section=f['section'], beatsPerBar=f['beatsPerBar'], chords=f['chords'],

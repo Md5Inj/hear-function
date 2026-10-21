@@ -87,6 +87,7 @@ for (const raw of ALL_SONGS) {
   const vocab = SB.SONG_LEVELS[m][SB.SONG_LEVELS[m].length - 1].vocab;
   ok(/^[\w-]{11}$/.test(s.youtube), `${s.id}: bad youtube id`);
   ok(s.end > s.start, `${s.id}: end <= start`);
+  ok(raw.start >= 0, `${s.id}: negative start`);
   ok(s.chords.length >= 1, `${s.id}: no chords`);
   for (const c of s.chords) {
     try { T.chordDef(m, c.c); } catch (e) { ok(false, `${s.id}: ${e.message}`); }

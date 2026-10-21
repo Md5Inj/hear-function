@@ -86,7 +86,7 @@ def spotify(track_id):
         return None
 out = []; n_songs = 0; seen_art = collections.Counter(); quota = collections.Counter()
 rows = list(csv.DictReader(open(path, encoding='utf-8')))
-random.seed(7); random.shuffle(rows)
+random.seed(int(__import__('os').environ.get('SEED', '7'))); random.shuffle(rows)  # другой SEED даёт другую выборку песен
 for row in rows:
     if not want_levels and n_songs >= max_songs: break
     if not row.get('spotify_song_id'): continue

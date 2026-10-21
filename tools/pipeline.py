@@ -130,10 +130,11 @@ for (artist, title), frs in order:
                 if c[1] == c[2]: match += 1
                 elif c[1].rstrip('m') == c[2].rstrip('m'): match += 0.5
             match /= len(r['checks'])
+            need = 1.0 if len(r['checks']) <= 4 else 0.9  # короткий фрагмент — ни одного промаха по тактам
             if f.get('noprior'):
-                ok = match >= 0.75 and r['score'] >= 2.0 * max(r['median'], 0.02) and len(r['checks']) >= 3
+                ok = match >= need and r['score'] >= 2.0 * max(r['median'], 0.02) and len(r['checks']) >= 3
             else:
-                ok = match >= 0.7 and r['score'] >= 1.8 * max(r['median'], 0.02) and abs(r['bpm'] - f['bpm']) <= 0.06 * f['bpm'] and abs(r['start'] - f['start']) <= 12
+                ok = match >= need and r['score'] >= 1.8 * max(r['median'], 0.02) and abs(r['bpm'] - f['bpm']) <= 0.06 * f['bpm'] and abs(r['start'] - f['start']) <= 12
             rec = dict(songKey=key, artist=artist, title=title, youtube=pick['id'], ytTitle=pick['title'], ytDur=pick['dur'], expectedDur=expected, bb=bb,
                        tonic=f['tonic'], mode=f['mode'], level=f['level'], section=f['section'], beatsPerBar=f['beatsPerBar'], chords=f['chords'],
                        start=r['start'], bpm=r['bpm'], bbStart=f['start'], bbBpm=f['bpm'], score=r['score'], median=r['median'], match=round(match, 2), ok=ok, noprior=bool(f.get('noprior')))

@@ -47,3 +47,6 @@ next-env.d.ts
 
 # re-created by next dev
 /AGENTS.md
+
+# python cache
+__pycache__/

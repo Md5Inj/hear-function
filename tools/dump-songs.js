@@ -1,6 +1,6 @@
 // node tools/dump-songs.js > songs.json — выгрузка базы песен для calibrate.py
-const S = require('../songs-db.js');
-const T = require('../theory.js');
+const S = require('../lib/songs-db.js');
+const T = require('../lib/theory.js');
 const out = S.SONGS.map(s => {
   const e = S.expand(s);
   return {
