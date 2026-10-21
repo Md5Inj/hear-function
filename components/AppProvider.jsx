@@ -3,7 +3,7 @@
    Хранилище намеренно мутабельное (как раньше), перерисовка — через refresh(). Первое состояние приходит с сервера (SSR). */
 import { createContext, useContext, useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import Synth from '@/lib/synth';
+import { createSampledEngine } from '@/lib/sampler';
 import { toast, installTips, pick, weightedPick } from './ui';
 
 const Ctx = createContext(null);
@@ -47,7 +47,7 @@ export default function AppProvider({ user, state, settings, children }) {
   }, [store]);
   const logAnswer = useCallback(rec => { if (store.user) api('POST', '/answer', rec).catch(() => {}); if (rec.songId) store.seen.add(rec.exercise + ':' + rec.songId); }, [store]);
   const engineRef = useRef(null);
-  const audio = useCallback(() => { if (!engineRef.current) { const C = window.AudioContext || window.webkitAudioContext; engineRef.current = Synth.createEngine(new C()); } return engineRef.current; }, []);
+  const audio = useCallback(() => { if (!engineRef.current) { const C = window.AudioContext || window.webkitAudioContext; engineRef.current = createSampledEngine(new C()); } return engineRef.current; }, []);
   /* корпус по видам: chords (все фрагменты) и melody (с вокальной фразой); кэш в store.songs[kind] */
   const songsPromise = useRef({});
   const loadSongs = useCallback((kind = 'chords') => {

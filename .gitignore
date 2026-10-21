@@ -50,3 +50,6 @@ next-env.d.ts
 
 # python cache
 __pycache__/
+
+# сэмплы инструментов скачиваются при сборке (tools/fetch-samples.js)
+/public/samples/

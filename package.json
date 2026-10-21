@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node test.js"
+    "test": "node test.js",
+    "prebuild": "node tools/fetch-samples.js",
+    "samples": "node tools/fetch-samples.js"
   },
   "dependencies": {
     "mongodb": "^7.7.0",
