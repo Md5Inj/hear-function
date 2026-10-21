@@ -5,9 +5,11 @@ import { adminFromToken, adminPath } from '@/lib/api';
 import AdminPage from '@/components/AdminPage';
 import AdminLogin from '@/components/AdminLogin';
 export const metadata = { title: 'Админка — Тренажёр слуха' };
-export default async function Page() {
+export default async function Page({ searchParams }) {
   if (!adminPath()) notFound();
   const c = await cookies();
   const admin = await adminFromToken(c.get('asid')?.value);
-  return admin ? <AdminPage admin={admin} /> : <AdminLogin />;
+  const sp = (await searchParams) || {};
+  const initial = { s: sp.s, kind: sp.kind, mode: sp.mode, level: sp.level, song: sp.song }; // параметры адреса — чтобы первый рендер на сервере совпал с клиентом
+  return admin ? <AdminPage admin={admin} initial={initial} /> : <AdminLogin />;
 }

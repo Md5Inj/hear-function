@@ -16,9 +16,9 @@ const fmtTime = t => Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padSt
 const modeName = m => m === 'major' ? 'мажор' : 'минор';
 const fmtVal = v => { if (v == null) return ''; const s = typeof v === 'object' ? JSON.stringify(v) : String(v); return s.length > 80 ? s.slice(0, 77) + '…' : s; };
 
-export default function AdminPage({ admin }) {
+export default function AdminPage({ admin, initial = {} }) {
   const { api, router } = useApp();
-  const [section, setSectionState] = useState(() => { const s = getQuery().get('s'); return SECTIONS.some(([k]) => k === s) ? s : 'overview'; });
+  const [section, setSectionState] = useState(() => SECTIONS.some(([k]) => k === initial.s) ? initial.s : 'overview');
   const setSection = useCallback(k => { setSectionState(k); setQuery({ s: k, kind: null, mode: null, level: null, song: null }, true); }, []);
   useEffect(() => { const onPop = () => { const s = getQuery().get('s'); setSectionState(SECTIONS.some(([k]) => k === s) ? s : 'overview'); }; window.addEventListener('popstate', onPop); return () => window.removeEventListener('popstate', onPop); }, []);
   return (
@@ -30,7 +30,7 @@ export default function AdminPage({ admin }) {
       </aside>
       <main className="admin-main">
         {section === 'overview' && <Overview api={api} go={setSection} />}
-        {section === 'review' && <SongReview />}
+        {section === 'review' && <SongReview initial={initial} />}
         {section === 'chords' && <SongList api={api} col="chordSongs" kind="chords" />}
         {section === 'melodies' && <SongList api={api} col="melodySongs" kind="melody" />}
         {section === 'users' && <Users api={api} />}

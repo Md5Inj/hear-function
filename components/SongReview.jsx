@@ -1,24 +1,49 @@
 'use client';
 /* Ручная проверка песен по уровням: админ отвечает вслепую в том же элементе, что и пользователь,
    после проверки ставит вердикт и пишет возражение; его ответ сохраняется вместе с вердиктом. */
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import SB from '@/lib/songs-db';
 import { useApp } from './AppProvider';
 import { toast, getQuery, setQuery } from './ui';
 import SongsExercise from './SongsExercise';
+import GridTimeline from './GridTimeline';
 
-export default function SongReview() {
+export default function SongReview({ initial = {} }) {
   const { api } = useApp();
-  const q0 = getQuery();
-  const [kind, setKind] = useState(q0.get('kind') === 'melody' ? 'melody' : 'chords'); const [mode, setMode] = useState(q0.get('mode') === 'minor' ? 'minor' : 'major'); const [level, setLevel] = useState(+q0.get('level') || 1);
+  const [kind, setKind] = useState(initial.kind === 'melody' ? 'melody' : 'chords'); const [mode, setMode] = useState(initial.mode === 'minor' ? 'minor' : 'major'); const [level, setLevel] = useState(+initial.level || 1);
   const [songs, setSongs] = useState(null); const [cur, setCurState] = useState(null);
   const setCur = useCallback((s, push = true) => { setCurState(s); setQuery({ song: s ? s.id : null }, push); }, []);
   useEffect(() => { setQuery({ s: 'review', kind, mode, level: kind === 'chords' ? level : null }); }, [kind, mode, level]);
   useEffect(() => { const onPop = () => { const q = getQuery(); const id = q.get('song'); setSongs(ss => { if (ss) { const f = ss.find(x => x.id === id); if (f) setCurState(f); } return ss; }); }; window.addEventListener('popstate', onPop); return () => window.removeEventListener('popstate', onPop); }, []);
-  const [result, setResult] = useState(null); const [note, setNote] = useState('');
+  const [result, setResult] = useState(null); const [note, setNote] = useState(''); const [commentOpen, setCommentOpen] = useState(false);
   const load = useCallback(() => { setSongs(null); setResult(null); api('GET', `/admin/review?kind=${kind}&mode=${mode}&level=${level}`).then(d => { setSongs(d.songs); const want = getQuery().get('song'); setCur(d.songs.find(s => s.id === want) || d.songs.find(s => !s.review) || d.songs[0] || null, false); }).catch(e => toast(e.message)); }, [api, kind, mode, level, setCur]);
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setResult(null); setNote(cur && cur.review ? cur.review.note || '' : ''); }, [cur]);
+  /* правка сетки: начало и темп фрагмента; применяется к текущей записи на лету, сохраняется кнопкой */
+  const [grid, setGrid] = useState(null);
+  useEffect(() => { setGrid(cur ? { start: cur.start, bpm: cur.bpm } : null); }, [cur && cur.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const gridChanged = cur && grid && (grid.start !== cur.start || grid.bpm !== cur.bpm);
+  async function saveGrid() {
+    if (!cur || !grid) return;
+    const doc = Object.assign({}, cur, { start: grid.start, bpm: grid.bpm }); delete doc.review;
+    try { const d = await api('PUT', `/admin/${kind === 'melody' ? 'melodySongs' : 'chordSongs'}/${encodeURIComponent(cur.id)}`, { doc }); const upd = Object.assign({}, cur, d.doc); setSongs(ss => ss.map(s => s.id === cur.id ? upd : s)); setCurState(upd); toast('Сетка сохранена'); } catch (e) { toast(e.message); }
+  }
+  const songForExercise = cur && grid ? Object.assign({}, cur, { start: grid.start, bpm: grid.bpm }) : cur;
+  useEffect(() => { setResult(null); setCommentOpen(false); setNote(cur && cur.review ? (cur.review.note || '').split('\n').filter(l => !l.startsWith('Мой ответ')).join('\n') : ''); }, [cur]);
+  useEffect(() => { if (!commentOpen) return; const onKey = ev => { if (ev.key === 'Escape') setCommentOpen(false); }; document.addEventListener('keydown', onKey); return () => document.removeEventListener('keydown', onKey); }, [commentOpen]);
+  /* горячие клавиши вердикта (латиница и русская раскладка): Y верна, X неверна, C комментарий, ] следующий */
+  const keysRef = useRef(null); keysRef.current = { save, next, open: () => setCommentOpen(true), commentOpen };
+  useEffect(() => {
+    const onKey = ev => {
+      if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName) || keysRef.current.commentOpen) return;
+      const k = ev.key.toLowerCase(); const f = keysRef.current;
+      if (k === 'y' || k === 'н') { ev.preventDefault(); f.save('ok'); }
+      else if (k === 'x' || k === 'ч') { ev.preventDefault(); f.save('bad'); }
+      else if (k === 'c' || k === 'с') { ev.preventDefault(); f.open(); }
+      else if (k === ']' || k === 'ъ') { ev.preventDefault(); f.next(); }
+    };
+    document.addEventListener('keydown', onKey); return () => document.removeEventListener('keydown', onKey);
+  }, []);
   async function save(status) {
     if (!cur) return;
     const answerText = result ? `Мой ответ: ${result.answer.map(x => x || '?').join(' – ')}; в разметке: ${result.truth.join(' – ')}${result.correct ? ' (совпало)' : ' (расходится)'}` : '';
@@ -40,26 +65,55 @@ export default function SongReview() {
       </div>
       <div className="review">
         <div className="review-list">
-          {songs && songs.map(s => (
+          {songs && songs.filter(s => !(s.review && s.review.status === 'bad')).map(s => (
             <button key={s.id} className={'review-item' + (cur && cur.id === s.id ? ' current' : '') + (s.review && s.review.status ? ' ' + s.review.status : '')} onClick={() => setCur(s)}>
-              <span className="mark">{s.review && s.review.status === 'ok' ? '✓' : s.review && s.review.status === 'bad' ? '✕' : '·'}</span>
+              <span className="mark">{s.review && s.review.status === 'ok' ? '✓' : '·'}</span>
               <span className="t">{s.title}<small>{s.artist} · {s.section || ''}</small></span>
             </button>
           ))}
           {songs && !songs.length && <p className="muted">На этом уровне песен нет.</p>}
+          {songs && songs.some(s => s.review && s.review.status === 'bad') && (
+            <details className="review-hidden">
+              <summary>Скрытые ({songs.filter(s => s.review && s.review.status === 'bad').length})</summary>
+              {songs.filter(s => s.review && s.review.status === 'bad').map(s => (
+                <button key={s.id} className={'review-item bad' + (cur && cur.id === s.id ? ' current' : '')} onClick={() => setCur(s)}>
+                  <span className="mark">✕</span>
+                  <span className="t">{s.title}<small>{s.artist} · {s.section || ''}</small></span>
+                </button>
+              ))}
+            </details>
+          )}
         </div>
         <div className="review-panel">
-          {cur && <div className="review-exercise"><SongsExercise key={cur.id} task={kind === 'melody' ? 'melody' : 'chords'} mode={mode} review={{ song: cur, vocab: 'all', onResult: setResult, onNext: next }} /></div>}
           {cur && (
-            <div className="review-form">
-              {!result && <p className="muted">Ответьте на слух и нажмите «Проверить», затем поставьте вердикт.</p>}
-              {result && <p className={result.correct ? 'auth-ok' : 'auth-err'}>{result.correct ? 'Ваш ответ совпал с разметкой.' : `Расходится: вы ${result.answer.map(x => x || '?').join(' – ')}, разметка ${result.truth.join(' – ')}.`}</p>}
-              <div className="actions">
-                <button className={'btn' + (status === 'ok' ? ' primary' : ' quiet')} disabled={!result} onClick={() => save('ok')}>✓ Разметка верна</button>
-                <button className={'btn' + (status === 'bad' ? ' danger' : ' quiet')} disabled={!result} onClick={() => save('bad')}>✕ Разметка неверна</button>
+            <div className="review-bar">
+              <button className={'btn ok' + (status === 'ok' ? ' on' : '')} data-tip="Разметка верна (Y)" onClick={() => save('ok')}>✓ Разметка верна</button>
+              <button className={'btn bad' + (status === 'bad' ? ' on' : '')} data-tip="Разметка неверна, фрагмент скрывается (X)" onClick={() => save('bad')}>✕ Разметка неверна</button>
+              {status === 'bad' && <button className="btn quiet" data-tip="Снять вердикт и вернуть фрагмент в упражнение" onClick={() => save(null)}>Вернуть в корпус</button>}
+              <button className={'btn note' + (note.trim() ? ' on' : '')} data-tip="Комментарий к фрагменту (C)" onClick={() => setCommentOpen(true)}>{note.trim() ? 'Комментарий ✎' : 'Добавить комментарий'}</button>
+              <button className="btn next" data-tip="Следующий непроверенный фрагмент ( ] )" onClick={next}>Следующий →</button>
+              {(result || (cur.review && cur.review.status)) && <span className="review-status muted">
+                {result ? (result.correct ? 'ответ совпал с разметкой' : `расходится: вы ${result.answer.map(x => x || '?').join(' – ')}, разметка ${result.truth.join(' – ')}`) : ''}
+                {cur.review && cur.review.status ? `${result ? ' · ' : ''}вердикт: ${cur.review.status === 'ok' ? 'верно' : 'неверно'}` : ''}
+              </span>}
+            </div>
+          )}
+          {cur && grid && (
+            <div className="review-grid">
+              <GridTimeline song={cur} grid={grid} setGrid={setGrid} />
+              {gridChanged && <div className="actions"><button className="btn primary mini" onClick={saveGrid}>Сохранить сетку</button><button className="btn quiet mini" onClick={() => setGrid({ start: cur.start, bpm: cur.bpm })}>Отменить</button></div>}
+            </div>
+          )}
+          {cur && <div className="review-exercise"><SongsExercise key={cur.id} task={kind === 'melody' ? 'melody' : 'chords'} mode={mode} review={{ song: songForExercise, level, onResult: setResult, onNext: next }} /></div>}
+          {commentOpen && (
+            <div className="auth-overlay" onClick={ev => { if (ev.target === ev.currentTarget) setCommentOpen(false); }}>
+              <div className="auth-box review-comment">
+                <button className="modal-close" type="button" aria-label="Закрыть" onClick={() => setCommentOpen(false)}>×</button>
+                <div className="auth-title">Комментарий к фрагменту</div>
+                <div className="auth-sub">{cur ? `${cur.title} · ${cur.artist}` : ''}</div>
+                <textarea className="review-note" autoFocus placeholder="Что на самом деле звучит, где ошибка в тактах, тональности, темпе…" value={note} onChange={e => setNote(e.target.value)} rows={5} />
+                <div className="auth-actions"><button className="btn primary" onClick={async () => { await save(status); setCommentOpen(false); }}>Сохранить</button><button className="link" type="button" onClick={() => setCommentOpen(false)}>Отмена</button></div>
               </div>
-              <textarea className="review-note" placeholder="Возражение: что на самом деле звучит, где ошибка в тактах, тональности, темпе…" value={note} onChange={e => setNote(e.target.value)} rows={3} />
-              <div className="actions"><button className="btn quiet mini" onClick={() => save(status)}>Сохранить возражение</button>{cur.review && <span className="muted">сохранено {new Date(cur.review.at).toLocaleString('ru-RU')}{cur.review.status ? ', ' + (cur.review.status === 'ok' ? 'верно' : 'неверно') : ''}</span>}</div>
             </div>
           )}
         </div>
