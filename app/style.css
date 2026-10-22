@@ -1048,7 +1048,8 @@ button.lvl-item:hover { background: var(--tint); }
 .gtl-play { left: 8px; bottom: 8px; }
 .gtl-del { right: 8px; top: 6px; }
 .gtl-del:hover { color: var(--bad); border-color: var(--bad); }
-.gtl-split { left: 50%; bottom: -12px; transform: translateX(-50%); z-index: 3; }
+.gtl-split { left: calc(50% - 15px); bottom: -12px; transform: translateX(-50%); z-index: 3; }
+.gtl-twin { left: calc(50% + 15px); bottom: -12px; transform: translateX(-50%); z-index: 3; }
 .gtl-add { right: -12px; top: 50%; transform: translateY(-50%); z-index: 4; }
 .gtl.editing { gap: 8px; }
 .gtl-transport { margin-bottom: 4px; }

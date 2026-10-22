@@ -35,13 +35,15 @@ export function barOps(song, bars, setBars) {
     if (nextSame) return setBars(renumber(bars.flatMap((x, i) => i === k + 1 ? [{ ...x, t: b.t, beats: x.beats + b.beats, dur: r3(x.dur + b.dur), barStart: true }] : i === k ? [] : [x])));
     setBars(renumber([...bars.slice(0, k), ...bars.slice(k + 1).map(x => ({ ...x, t: r3(x.t - b.dur) }))]));
   };
-  /* разделить: ещё один аккорд в такте — единица делится пополам, вторая половина с тем же аккордом */
+  /* разделить: ещё один аккорд в такте — единица делится пополам, вторая половина с тем же аккордом (внутри одного такта) */
   const split = k => { const b = bars[k]; if (b.beats < 1) return; const h = b.beats / 2, d = r3(b.dur / 2); setBars(renumber(bars.flatMap((x, i) => i === k ? [{ ...x, beats: h, dur: d }, { ...x, t: r3(x.t + d), beats: h, dur: r3(x.dur - d), barStart: false }] : [x]))); };
-  return { vocab, bpb, setT, setDur, setC, add, del, split };
+  /* разделить на два такта: такт делится пополам, но обе половины становятся полноценными тактами с тем же аккордом */
+  const twin = k => { const b = bars[k]; if (b.beats < 1) return; const h = b.beats / 2, d = r3(b.dur / 2); setBars(renumber(bars.flatMap((x, i) => i === k ? [{ ...x, beats: h, dur: d, barStart: true }, { ...x, t: r3(x.t + d), beats: h, dur: r3(x.dur - d), barStart: true }] : [x]))); };
+  return { vocab, bpb, setT, setDur, setC, add, del, split, twin };
 }
 
 export default function BarEditor({ song, bars, setBars }) {
-  const { vocab, bpb, setT, setDur, setC, add, del, split } = barOps(song, bars, setBars);
+  const { vocab, bpb, setT, setDur, setC, add, del, split, twin } = barOps(song, bars, setBars);
   return (
     <table className="bar-editor">
       <thead><tr><th>Bar</th><th>Degree</th><th>Start, s</th><th>Length, s</th><th></th></tr></thead>
@@ -61,6 +63,7 @@ export default function BarEditor({ song, bars, setBars }) {
               <button className="btn quiet mini" data-tip="Listen to this bar" onClick={() => Y.playRange(song.youtube, b.t, b.t + b.dur)}>▶</button>
               <button className="btn quiet mini" data-tip="Add a bar after this one" onClick={() => add(k)}>+</button>
               <button className="btn quiet mini" data-tip="Another chord in this bar: split in half" onClick={() => split(k)} disabled={b.beats < 1}>÷</button>
+              <button className="btn quiet mini" data-tip="Split into two bars" onClick={() => twin(k)} disabled={b.beats < 1}>‖</button>
               <button className="btn quiet mini" data-tip="Delete bar" onClick={() => del(k)} disabled={bars.length <= 1}>✕</button>
             </td>
           </tr>

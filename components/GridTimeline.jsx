@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { YTP as Y } from '@/lib/yt';
 
 export const r3 = x => Math.round(x * 1000) / 1000;
-export default function GridTimeline({ song, bars, setBars, editable, vocab, onChord, onAdd, onDel, onSplit }) {
+export default function GridTimeline({ song, bars, setBars, editable, vocab, onChord, onAdd, onDel, onSplit, onTwin }) {
   const start = bars[0].t, end = bars[bars.length - 1].t + bars[bars.length - 1].dur, dur = end - start, pad = Math.max(2.5, dur * (editable ? 0.2 : 0.4));  // в редакторе фрагменту отдаём больше ширины
   const win0 = Math.max(0, start - pad), win1 = end + pad, winLen = win1 - win0;
   const ref = useRef(null); const [playT, setPlayT] = useState(null); const [playing, setPlaying] = useState(false); const [vdur, setVdur] = useState(0); const [pos, setPos] = useState(0);
@@ -87,6 +87,7 @@ export default function GridTimeline({ song, bars, setBars, editable, vocab, onC
                   <button type="button" className="gtl-ic gtl-play" onClick={() => Y.playRange(song.youtube, b.t, b.t + b.dur)} data-tip="Listen"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z" /></svg></button>
                   <button type="button" className="gtl-ic gtl-del" onClick={() => onDel(k)} data-tip={b.barStart === false ? 'Remove this chord' : 'Delete bar'} disabled={bars.length <= 1}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
                   {b.beats >= 1 && <button type="button" className="gtl-ic gtl-split" onClick={() => onSplit(k)} data-tip="Split: another chord in the bar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 4v16" strokeDasharray="3 3" /><path d="M8 8l-4 4 4 4M16 8l4 4-4 4" /></svg></button>}
+                  {b.beats >= 1 && <button type="button" className="gtl-ic gtl-twin" onClick={() => onTwin(k)} data-tip="Split into two bars"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="7" width="7" height="10" rx="1" /><rect x="14" y="7" width="7" height="10" rx="1" /></svg></button>}
                   <button type="button" className="gtl-ic gtl-add" onClick={() => onAdd(k)} data-tip="Add a bar after"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg></button>
                 </span>
               )}
