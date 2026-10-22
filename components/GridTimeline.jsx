@@ -11,7 +11,7 @@ export default function GridTimeline({ song, bars, setBars, editable, vocab, onC
   const start = bars[0].t, end = bars[bars.length - 1].t + bars[bars.length - 1].dur, dur = end - start, pad = Math.max(2.5, dur * (editable ? 0.2 : 0.4));  // в редакторе фрагменту отдаём больше ширины
   const win0 = Math.max(0, start - pad), win1 = end + pad, winLen = win1 - win0;
   const ref = useRef(null); const [playT, setPlayT] = useState(null); const [playing, setPlaying] = useState(false); const [vdur, setVdur] = useState(0); const [pos, setPos] = useState(0);
-  const drag = useRef(null); const [locked, setLocked] = useState(false); const scrubRef = useRef(null); const scrubbing = useRef(false); const seekAt = useRef(0);  // после перемотки позицию плеера не читаем, пока он не перескочил
+  const drag = useRef(null); const [locked, setLocked] = useState(false); const scrubRef = useRef(null); const scrubbing = useRef(false); const seekAt = useRef(0); const lastGesture = useRef(0);  // после перемотки позицию плеера не читаем, пока он не перескочил; lastGesture — чтобы клик после перетаскивания не перематывал
   const scrubT = clientX => { const r = scrubRef.current.getBoundingClientRect(); const f = Math.max(0, Math.min(1, (clientX - r.left) / r.width)); return xToTime(f); };  // клик над тактом N попадает в такт N
   const xOf = t => (t - win0) / winLen * 100;
   // позиция по реальному времени: доля полосы (0..1) <-> секунды в окне win0..win1
@@ -42,7 +42,7 @@ export default function GridTimeline({ song, bars, setBars, editable, vocab, onC
     } else if (d.kind === 'last') { const k = b0.length - 1; setBars(b0.map((b, i) => i === k ? { ...b, dur: r3(Math.max(0.2, b.dur + dt)) } : b)); }
     else if (d.kind === 'first') { const x = Math.min(Math.max(0, b0[0].t + dt), b0[0].t + b0[0].dur - 0.2); setBars(b0.map((b, i) => i === 0 ? { ...b, t: r3(x), dur: r3(b.t + b.dur - x) } : b)); }
   }
-  function up() { drag.current = null; }
+  function up() { if (drag.current) lastGesture.current = Date.now(); drag.current = null; }  // пометка: только что было перетаскивание — следующий click не должен перематывать
   const ticks = []; for (let t = Math.ceil(win0); t <= win1; t++) ticks.push(t);
   const fmt = t => Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
   const beats = bars.reduce((a, b) => a + b.beats, 0), bpm = beats * 60 / dur;
@@ -72,7 +72,7 @@ export default function GridTimeline({ song, bars, setBars, editable, vocab, onC
           <div className="gtl-scrub-knob" style={{ left: timeToFrac(pos) * 100 + '%' }} />
         </div>
       )}
-      <div className={'gtl-strip' + (editable ? ' seekable' : '')} ref={ref} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onClick={ev => { if (editable && ev.target === ref.current) { const r = ref.current.getBoundingClientRect(); goTo(xToTime(Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width)))); } }} title={editable ? 'Click an empty spot to play from there' : undefined}>
+      <div className={'gtl-strip' + (editable ? ' seekable' : '')} ref={ref} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onClick={ev => { if (Date.now() - lastGesture.current < 350) return; if (editable && ev.target === ref.current) { const r = ref.current.getBoundingClientRect(); goTo(xToTime(Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width)))); } }} title={editable ? 'Click an empty spot to play from there' : undefined}>
         {!editable && ticks.map(t => <span key={t} className={'gtl-tick' + (t % 5 === 0 ? ' major' : '')} style={{ left: xOf(t) + '%' }}>{t % 5 === 0 ? <em>{fmt(t)}</em> : null}</span>)}
         <div className={'gtl-grid' + (editable ? ' editable' : '')} style={{ left: xOf(start) + '%', width: (dur / winLen * 100) + '%' }} onPointerDown={ev => down(ev, 'shift')} title="Drag to move all bars">
           {bars.map((b, k) => (

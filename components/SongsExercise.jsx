@@ -197,9 +197,9 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
   const firstGrid = useRef(gridKey);
   useEffect(() => {
     if (!R || firstGrid.current === gridKey || !loaded) return;
-    firstGrid.current = gridKey; clearTimeout(st.cadenceTimer); Y.pause();
+    firstGrid.current = gridKey; clearTimeout(st.cadenceTimer);  // сетку правят перетаскиванием — не ставим плеер на паузу и не пересматываем, иначе звук обрывается
     st.q = newQuestion(); st.answered = false; st.transport = false; st.playing = -1;
-    if (st.q) { st.chordSlots = st.q.units.map(() => null); st.melSlots = st.q.melody ? st.q.song.melody.degrees.map(() => null) : []; st.selChord = 0; st.selMel = 0; st.anchor = null; st.loopOn = false; st.loopRange = null; Y.cue(st.q.song.youtube, st.q.song.start); }
+    if (st.q) { st.chordSlots = st.q.units.map(() => null); st.melSlots = st.q.melody ? st.q.song.melody.degrees.map(() => null) : []; st.selChord = 0; st.selMel = 0; st.anchor = null; st.loopOn = false; st.loopRange = null; }
     rerender();
   }, [gridKey, loaded]); // eslint-disable-line react-hooks/exhaustive-deps
   /* работа над ошибками: вопрос после загрузки списка */
