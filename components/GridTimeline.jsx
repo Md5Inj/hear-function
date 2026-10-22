@@ -63,7 +63,6 @@ export default function GridTimeline({ song, bars, setBars, editable, vocab, onC
             {playing ? <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z" /></svg> : <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z" /></svg>}
           </button>
           <span className="gtl-time">{fmt2(pos)}</span>
-          <span className="gtl-meta">window {fmt(win0)}–{fmt(win1)} of {fmt(total)}</span>
           <span style={{ flex: 1 }} />
           {lockBtn}
         </div>
@@ -102,7 +101,7 @@ export default function GridTimeline({ song, bars, setBars, editable, vocab, onC
         <div className="gtl-handle" style={{ left: xOf(end) + '%' }} onPointerDown={ev => down(ev, 'last')} title="Drag to change the length of the last bar" />
         {playT != null && playT >= start && playT <= end && <div className="gtl-head" style={{ left: xOf(playT) + '%' }} />}
       </div>
-      {editable && <div className="gtl-foot">{meta}<span className="gtl-hint">Drag a bar border to move it, drag the grid to shift all bars, the side handles for start and length. The lock stretches all bars together. Need exact numbers? Use "Exact values".</span></div>}
+      {editable && <div className="gtl-foot"><span className="gtl-hint">Drag a bar border to move it, drag the grid to shift all bars, the side handles for start and length. The lock stretches all bars together. Need exact numbers? Use "Exact values".</span></div>}
     </div>
   );
 }
