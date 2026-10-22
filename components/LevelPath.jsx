@@ -27,7 +27,7 @@ export default function LevelPath({ levels, level, maxLevel, history = [], W = 2
   const hint = last ? 'last level' : `to next: ${leftN} correct${need > 0 ? ` and ${need} more answers` : ''} of ${W}`;
   const [opened, setOpened] = useState(null);
 
-  const itemBase = cn('grid gap-3.5 items-center text-left bg-transparent border-0 rounded-xl text-ink',
+  const itemBase = cn('grid gap-3.5 items-start text-left bg-transparent border-0 rounded-xl text-ink',
     compact ? 'grid-cols-[34px_minmax(0,1fr)] px-0 py-1' : 'grid-cols-[42px_minmax(0,1fr)_auto] px-2.5 py-2');
   const ringSize = compact ? 'w-[34px] h-[34px]' : 'w-[42px] h-[42px]';
   const icoSize = compact ? 'w-[34px] h-[34px]' : 'w-[42px] h-[42px]';
