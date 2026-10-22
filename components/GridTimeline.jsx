@@ -14,10 +14,9 @@ export default function GridTimeline({ song, bars, setBars, editable, vocab, onC
   const drag = useRef(null); const [locked, setLocked] = useState(true); const scrubRef = useRef(null); const scrubbing = useRef(false); const seekAt = useRef(0);  // после перемотки позицию плеера не читаем, пока он не перескочил
   const scrubT = clientX => { const r = scrubRef.current.getBoundingClientRect(); const f = Math.max(0, Math.min(1, (clientX - r.left) / r.width)); return xToTime(f); };  // клик над тактом N попадает в такт N
   const xOf = t => (t - win0) / winLen * 100;
-  // в редакторе такты равной ширины: координата x (0..1 полосы) <-> время через ячейки
-  const units = bars.length;
-  const xToTime = f => { const i = Math.max(0, Math.min(units - 1, Math.floor(f * units))); const within = f * units - i; return bars[i].t + within * bars[i].dur; };
-  const timeToFrac = tt => { if (tt <= start) return 0; if (tt >= end) return 1; for (let i = 0; i < units; i++) { const b = bars[i]; if (tt < b.t + b.dur) return (i + (tt - b.t) / b.dur) / units; } return 1; };
+  // позиция по реальному времени: доля полосы (0..1) <-> секунды в окне win0..win1
+  const xToTime = f => win0 + Math.max(0, Math.min(1, f)) * winLen;
+  const timeToFrac = tt => Math.max(0, Math.min(1, (tt - win0) / winLen));
   useEffect(() => {
     const id = setInterval(() => { const on = Y.state() === 1 && Y.currentId === song.youtube; setPlaying(on); setPlayT(on ? Y.time() : null); if (Y.currentId === song.youtube && !scrubbing.current && Date.now() - seekAt.current > 800) { setPos(Y.time()); const p = Y.player; const d = p && typeof p.getDuration === 'function' ? p.getDuration() : 0; if (d > 0) setVdur(d); } }, 80);
     return () => clearInterval(id);
@@ -79,9 +78,9 @@ export default function GridTimeline({ song, bars, setBars, editable, vocab, onC
       )}
       <div className={'gtl-strip' + (editable ? ' seekable' : '')} ref={ref} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onClick={ev => { if (editable && ev.target === ref.current) { const r = ref.current.getBoundingClientRect(); goTo(xToTime(Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width)))); } }} title={editable ? 'Click an empty spot to play from there' : undefined}>
         {!editable && ticks.map(t => <span key={t} className={'gtl-tick' + (t % 5 === 0 ? ' major' : '')} style={{ left: xOf(t) + '%' }}>{t % 5 === 0 ? <em>{fmt(t)}</em> : null}</span>)}
-        <div className={'gtl-grid' + (editable ? ' editable' : '')} style={editable ? { left: 0, width: '100%' } : { left: xOf(start) + '%', width: (dur / winLen * 100) + '%' }} onPointerDown={ev => { if (!editable) down(ev, 'shift'); }} title={editable ? undefined : 'Drag to move all bars'}>
+        <div className={'gtl-grid' + (editable ? ' editable' : '')} style={{ left: xOf(start) + '%', width: (dur / winLen * 100) + '%' }} onPointerDown={ev => down(ev, 'shift')} title="Drag to move all bars">
           {bars.map((b, k) => (
-            <i key={k} className={'gtl-bar' + (b.barStart === false ? ' sub' : '')} style={editable ? { left: (k / units * 100) + '%', width: (100 / units) + '%' } : { left: ((b.t - start) / dur * 100) + '%', width: (b.dur / dur * 100) + '%' }}>
+            <i key={k} className={'gtl-bar' + (b.barStart === false ? ' sub' : '')} style={{ left: ((b.t - start) / dur * 100) + '%', width: (b.dur / dur * 100) + '%' }}>
               <b>{b.barStart === false ? '' : b.n}</b>
               {editable && (
                 <span className="gtl-cell-tools" onPointerDown={ev => ev.stopPropagation()}>
@@ -95,15 +94,15 @@ export default function GridTimeline({ song, bars, setBars, editable, vocab, onC
                   <button type="button" className="gtl-ic gtl-add" onClick={() => onAdd(k)} data-tip="Add a bar after"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg></button>
                 </span>
               )}
-              {!editable && k > 0 && <u className="gtl-edge" onPointerDown={ev => down(ev, 'edge', k)} title="Drag the bar border" />}
+              {k > 0 && <u className="gtl-edge" onPointerDown={ev => down(ev, 'edge', k)} title="Drag the bar border" />}
             </i>
           ))}
         </div>
-        {!editable && <div className="gtl-handle left" style={{ left: xOf(start) + '%' }} onPointerDown={ev => down(ev, 'first')} title="Drag to change the start of the first bar" />}
-        {!editable && <div className="gtl-handle" style={{ left: xOf(end) + '%' }} onPointerDown={ev => down(ev, 'last')} title="Drag to change the length of the last bar" />}
-        {playT != null && playT >= start && playT <= end && <div className="gtl-head" style={{ left: (editable ? timeToFrac(playT) * 100 : xOf(playT)) + '%' }} />}
+        <div className="gtl-handle left" style={{ left: xOf(start) + '%' }} onPointerDown={ev => down(ev, 'first')} title="Drag to change the start of the first bar" />
+        <div className="gtl-handle" style={{ left: xOf(end) + '%' }} onPointerDown={ev => down(ev, 'last')} title="Drag to change the length of the last bar" />
+        {playT != null && playT >= start && playT <= end && <div className="gtl-head" style={{ left: xOf(playT) + '%' }} />}
       </div>
-      {editable && <div className="gtl-foot">{meta}<span className="gtl-hint">Bars have equal width. Click above a bar on the strip to play from there. Change the start and length of each bar in "Exact values".</span></div>}
+      {editable && <div className="gtl-foot">{meta}<span className="gtl-hint">Drag a bar border to move it, drag the grid to shift all bars, the side handles for start and length. The lock stretches all bars together. Need exact numbers? Use "Exact values".</span></div>}
     </div>
   );
 }

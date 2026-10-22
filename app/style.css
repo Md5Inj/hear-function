@@ -1005,7 +1005,7 @@ button.lvl-item:hover { background: var(--tint); }
 .bar-editor input { width: 92px; text-align: right; }
 .bar-editor .bar-actions { white-space: nowrap; display: flex; gap: 4px; }
 .bar-editor .btn.mini { padding: 3px 9px; }
-.bar-modal .bar-modal .bar-modal .bar-modal /* ---------- редактор тактов: попап, транспорт, полоса, ячейки ---------- */
+/* ---------- редактор тактов: попап, транспорт, полоса, ячейки ---------- */
 .gtl-lock { display: inline-flex; align-items: center; padding: 5px 8px; }
 .gtl-lock.on { border-color: var(--accent); color: var(--accent); }
 .review-grid-line { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 14px; }
@@ -1035,7 +1035,10 @@ button.lvl-item:hover { background: var(--tint); }
 .gtl.editing .gtl-bar.sub { border-left: 1.5px dashed var(--accent); }
 .gtl.editing .gtl-bar b { font: 500 12px var(--sans); color: var(--accent); left: 8px; top: 6px; }
 .gtl-bar .gtl-edge { position: absolute; top: -6px; bottom: -6px; left: -7px; width: 14px; cursor: ew-resize; z-index: 2; }
-.gtl-cell-tools { position: absolute; inset: 0; min-width: 0; }
+.gtl-cell-tools { position: absolute; inset: 0; min-width: 0; pointer-events: none; }  /* фон такта тянется, кликабельны только контролы */
+.gtl-chord { pointer-events: auto; }
+.gtl-bar .gtl-ic { pointer-events: none; }
+.gtl-bar:hover .gtl-ic { pointer-events: auto; }
 .gtl-chord { background-image: none; padding-right: 10px; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: calc(100% - 20px); font: 500 18px var(--serif); padding: 5px 10px; border: 1px solid var(--rule); border-radius: 999px; background: var(--paper); color: var(--ink); text-align: center; cursor: pointer; box-shadow: 0 1px 2px rgba(28,32,51,.06); }
 .gtl-chord:hover, .gtl-chord:focus { border-color: var(--accent); outline: none; }
 .gtl-ic { position: absolute; width: 24px; height: 24px; border-radius: 999px; border: 1px solid var(--rule); background: var(--paper); color: var(--ink-3); display: inline-flex; align-items: center; justify-content: center; padding: 0; cursor: pointer; opacity: 0; transition: opacity .12s, color .12s, border-color .12s; box-shadow: 0 1px 2px rgba(28,32,51,.08); }
