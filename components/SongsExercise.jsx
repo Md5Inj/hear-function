@@ -198,7 +198,10 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
   useEffect(() => {
     if (!R || firstGrid.current === gridKey || !loaded) return;
     firstGrid.current = gridKey; clearTimeout(st.cadenceTimer);  // сетку правят перетаскиванием — не ставим плеер на паузу и не пересматываем, иначе звук обрывается
-    st.q = newQuestion(); st.answered = false; st.transport = false; st.playing = -1;
+    const nq = newQuestion();
+    if (nq && st.q && st.q.song && st.q.song.youtube === nq.song.youtube) { Object.assign(st.q.song, nq.song); st.q.units = nq.units; st.q.vocab = nq.vocab; st.q.chords = nq.chords; st.q.melody = nq.melody; }
+    else st.q = nq;
+    st.answered = false; st.transport = false; st.playing = -1;
     if (st.q) { st.chordSlots = st.q.units.map(() => null); st.melSlots = st.q.melody ? st.q.song.melody.degrees.map(() => null) : []; st.selChord = 0; st.selMel = 0; st.anchor = null; st.loopOn = false; st.loopRange = null; }
     rerender();
   }, [gridKey, loaded]); // eslint-disable-line react-hooks/exhaustive-deps
