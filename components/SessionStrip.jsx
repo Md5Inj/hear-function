@@ -25,9 +25,9 @@ export function SessionStrip({ session, noun, active, right, note, idle }) {
   const { n, results } = session;
   const good = results.filter(Boolean).length, bad = results.length - good;
   return (
-    <section className="py-[18px] pb-4 border-b border-rule grid grid-cols-[auto_1fr_auto] gap-y-2.5 gap-x-[22px] items-center">
-      {!idle && <div className="flex gap-1.5">
-        {Array.from({ length: n }, (_, i) => { const s = i < results.length ? (results[i] ? 'y' : 'n') : (i === results.length && active ? 'cur' : ''); return <i key={i} className={cn('block w-[26px] h-2 rounded', stepBg[s])} />; })}
+    <section className="py-[18px] pb-4 border-b border-rule grid grid-cols-1 sm:grid-cols-[auto_1fr_auto] gap-y-2.5 gap-x-[22px] items-center">
+      {!idle && <div className="flex gap-1.5 w-full sm:w-auto">
+        {Array.from({ length: n }, (_, i) => { const s = i < results.length ? (results[i] ? 'y' : 'n') : (i === results.length && active ? 'cur' : ''); return <i key={i} className={cn('block h-2 rounded flex-1 min-w-0 sm:flex-none sm:w-[26px]', stepBg[s])} />; })}
       </div>}
       <div className="text-ink-2 text-[15px] whitespace-nowrap">
         {active ? <>{noun} <b className="text-ink font-medium">{Math.min(results.length + 1, n)}</b> of {n} <span className="inline-block min-w-[22px] ml-2.5 px-[7px] py-px rounded-full font-semibold tabular-nums text-center text-ok bg-ok-bg" data-tip="Correct">{good}</span><span className="inline-block min-w-[22px] ml-1 px-[7px] py-px rounded-full font-semibold tabular-nums text-center text-bad bg-bad-bg" data-tip="Mistakes">{bad}</span>{note ? <span className="text-ink-3"> · {note}</span> : null}</> : null}
@@ -63,7 +63,7 @@ export function SettingsPopover({ ctx, showTimbre, hidden, mistakes }) {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg>
       </button>
       {open && (
-        <div className="absolute right-0 top-11 z-30 w-[360px] bg-paper border border-rule rounded-xl shadow-[0_12px_32px_rgba(28,32,51,0.12)] p-4 pt-5 grid gap-4" ref={popRef}>
+        <div className="absolute right-0 top-11 z-30 w-[min(360px,calc(100vw-1.5rem))] bg-paper border border-rule rounded-xl shadow-[0_12px_32px_rgba(28,32,51,0.12)] p-4 pt-5 grid gap-4" ref={popRef}>
           <button className={closeCls} type="button" aria-label="Close" onClick={() => setOpen(false)}>×</button>
           <div className="grid gap-2"><span className={labelCls}>Level</span>
             <LevelPath levels={ctx.levels()} level={p.level} maxLevel={p.maxLevel} history={(p.byLevel || {})[Math.max(p.maxLevel || 1, p.level)] || p.history || []} W={settings.levelUpWindow || 20} NEED={settings.levelUpNeed || 16} onSelect={n => { ctx.setLevel(n); setOpen(false); }} />

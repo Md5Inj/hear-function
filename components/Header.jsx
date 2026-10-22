@@ -1,6 +1,7 @@
 'use client';
 /* Шапка: название, меню с подпунктами «Major / Minor», справа справка, прогресс, история, аккаунт, выход.
-   Язык из next-intl; пользователь известен уже на сервере. Вёрстка на Tailwind. */
+   На узких экранах меню сворачивается в бургер. Язык из next-intl; пользователь известен уже на сервере. Вёрстка на Tailwind. */
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
@@ -12,6 +13,7 @@ const pill = 'px-2.5 py-[7px] rounded-full text-ink-2 transition-colors hover:bg
 const pillOn = 'bg-accent-soft text-accent font-medium hover:text-accent hover:bg-accent-soft';
 const menuItem = 'flex items-center gap-2 px-3 py-[7px] rounded-lg text-ink text-[15px] hover:bg-tint hover:no-underline';
 const menuItemOn = 'bg-accent-soft text-accent hover:bg-accent-soft';
+const sheetItem = 'flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-ink text-base hover:bg-tint hover:no-underline';
 
 function LangSwitch() {
   const locale = useLocale(); const router = useRouter();
@@ -25,15 +27,26 @@ function LangSwitch() {
   );
 }
 
+const HelpIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M9.1 9a3 3 0 0 1 5.82 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></svg>;
+const AccountIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="3.4" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /></svg>;
+const HistoryIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>;
+const StatsIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19h16" /><path d="M4 15l5-5 4 4 7-7" /></svg>;
+const SignOutIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M10 17l5-5-5-5" /><path d="M15 12H3" /><path d="M21 3v18" /></svg>;
+
 export default function Header() {
   const path = usePathname();
   const { store, openLogin, logout } = useApp();
   const t = useTranslations('Nav');
   const u = store.user;
+  const [open, setOpen] = useState(false);
+  useEffect(() => { setOpen(false); }, [path]);  // закрываем бургер при переходе
+  const close = () => setOpen(false);
   return (
-    <header className="flex items-center justify-between gap-4 pt-[22px] pb-[18px] border-b border-rule">
-      <Link className="font-serif text-xl font-medium text-ink tracking-[-0.01em] hover:no-underline" href="/">hear function</Link>
-      <nav className="flex items-center gap-0.5 text-[15px]">
+    <header className="relative flex items-center justify-between gap-4 pt-[22px] pb-[18px] border-b border-rule">
+      <Link className="font-serif text-xl font-medium text-ink tracking-[-0.01em] whitespace-nowrap hover:no-underline" href="/">hear function</Link>
+
+      {/* широкие экраны: полное меню */}
+      <nav className="hidden lg:flex items-center gap-0.5 text-[15px]">
         {NAV.map(([href, key, plain]) => plain ? (
           <Link key={href} href={href} className={cn(pill, path === href && pillOn)}>{t(key)}</Link>
         ) : (
@@ -49,9 +62,7 @@ export default function Header() {
         ))}
         <span className="inline-flex items-center gap-2 ml-1.5 pl-2.5 border-l border-rule leading-none">
           <LangSwitch />
-          <Link href="/guide" className={cn('inline-flex items-center', pill, path === '/guide' && pillOn)} data-tip={t('help')} aria-label={t('help')}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M9.1 9a3 3 0 0 1 5.82 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></svg>
-          </Link>
+          <Link href="/guide" className={cn('inline-flex items-center', pill, path === '/guide' && pillOn)} data-tip={t('help')} aria-label={t('help')}><HelpIcon /></Link>
           {u ? (
             <div className="relative group">
               <Link href="/account" className={cn('inline-flex items-center gap-1.5 bg-tint text-ink rounded-full pl-3 pr-2.5 py-1.5 text-sm hover:no-underline', (path === '/account' || path === '/history' || path === '/progress') && 'ring-1 ring-accent')} data-tip={(u.email || '')}>
@@ -60,23 +71,11 @@ export default function Header() {
               </Link>
               <div className="absolute right-0 top-full pt-1.5 z-[60] hidden group-hover:block group-focus-within:block">
                 <div className="min-w-44 p-1.5 bg-paper border border-rule rounded-xl shadow-[0_10px_28px_rgba(28,32,51,0.14)]">
-                  <Link href="/account" prefetch={false} className={cn(menuItem, path === '/account' && menuItemOn)}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="3.4" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /></svg>
-                    {t('myAccount')}
-                  </Link>
-                  <Link href="/history" prefetch={false} className={cn(menuItem, path === '/history' && menuItemOn)}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
-                    {t('history')}
-                  </Link>
-                  <Link href="/progress" prefetch={false} className={cn(menuItem, path === '/progress' && menuItemOn)}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19h16" /><path d="M4 15l5-5 4 4 7-7" /></svg>
-                    {t('stats')}
-                  </Link>
+                  <Link href="/account" prefetch={false} className={cn(menuItem, path === '/account' && menuItemOn)}><AccountIcon />{t('myAccount')}</Link>
+                  <Link href="/history" prefetch={false} className={cn(menuItem, path === '/history' && menuItemOn)}><HistoryIcon />{t('history')}</Link>
+                  <Link href="/progress" prefetch={false} className={cn(menuItem, path === '/progress' && menuItemOn)}><StatsIcon />{t('stats')}</Link>
                   <div className="my-1 border-t border-rule" />
-                  <button className="flex w-full items-center gap-2 px-3 py-[7px] rounded-lg text-ink-2 text-[15px] bg-transparent border-0 cursor-pointer text-left hover:bg-tint hover:text-bad" onClick={logout}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M10 17l5-5-5-5" /><path d="M15 12H3" /><path d="M21 3v18" /></svg>
-                    {t('signOut')}
-                  </button>
+                  <button className="flex w-full items-center gap-2 px-3 py-[7px] rounded-lg text-ink-2 text-[15px] bg-transparent border-0 cursor-pointer text-left hover:bg-tint hover:text-bad" onClick={logout}><SignOutIcon />{t('signOut')}</button>
                 </div>
               </div>
             </div>
@@ -85,6 +84,39 @@ export default function Header() {
           )}
         </span>
       </nav>
+
+      {/* узкие экраны: бургер */}
+      <div className="lg:hidden flex items-center gap-2">
+        <LangSwitch />
+        <button className="inline-flex items-center justify-center w-10 h-10 rounded-full border border-rule bg-paper text-ink-2 hover:text-ink hover:border-ink" aria-label="Menu" aria-expanded={open} onClick={() => setOpen(o => !o)}>
+          {open
+            ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+            : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 6h18M3 12h18M3 18h18" /></svg>}
+        </button>
+      </div>
+
+      {open && (
+        <>
+          <div className="lg:hidden fixed inset-0 z-[65]" onClick={close} aria-hidden="true" />
+          <nav className="lg:hidden absolute left-0 right-0 top-full z-[70] mt-px bg-paper border-b border-rule shadow-[0_16px_32px_rgba(28,32,51,0.14)] p-3 grid gap-1">
+            {NAV.map(([href, key]) => (
+              <Link key={href} href={href} onClick={close} className={cn(sheetItem, path === href && menuItemOn)}>{t(key)}</Link>
+            ))}
+            <div className="my-1 border-t border-rule" />
+            <Link href="/guide" onClick={close} className={cn(sheetItem, path === '/guide' && menuItemOn)}><HelpIcon />{t('help')}</Link>
+            {u ? (
+              <>
+                <Link href="/account" onClick={close} className={cn(sheetItem, path === '/account' && menuItemOn)}><AccountIcon />{t('myAccount')}</Link>
+                <Link href="/history" onClick={close} className={cn(sheetItem, path === '/history' && menuItemOn)}><HistoryIcon />{t('history')}</Link>
+                <Link href="/progress" onClick={close} className={cn(sheetItem, path === '/progress' && menuItemOn)}><StatsIcon />{t('stats')}</Link>
+                <button className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-ink-2 text-base bg-transparent border-0 cursor-pointer text-left hover:bg-tint hover:text-bad" onClick={() => { close(); logout(); }}><SignOutIcon />{t('signOut')}</button>
+              </>
+            ) : (
+              <button className="mt-1 rounded-full bg-accent text-white px-4 py-2.5 text-base font-medium text-center hover:bg-[#2740b8]" onClick={() => { close(); openLogin(); }}>{t('signIn')}</button>
+            )}
+          </nav>
+        </>
+      )}
     </header>
   );
 }

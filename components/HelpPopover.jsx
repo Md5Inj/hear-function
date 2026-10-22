@@ -24,7 +24,7 @@ export default function HelpPopover({ exercise }) {
     <>
       <button className="w-9 h-9 rounded-full border border-rule bg-paper text-ink-2 inline-flex items-center justify-center cursor-pointer font-serif text-base font-medium hover:border-ink hover:text-ink" aria-label="Help" data-tip="Help" onClick={ev => { ev.stopPropagation(); setOpen(o => !o); }}>?</button>
       {open && (
-        <div className="absolute right-0 top-11 z-30 w-[420px] bg-paper border border-rule rounded-xl shadow-[0_12px_32px_rgba(28,32,51,0.12)] pt-5 px-4 pb-4 grid gap-4" ref={ref}>
+        <div className="absolute right-0 top-11 z-30 w-[min(420px,calc(100vw-1.5rem))] bg-paper border border-rule rounded-xl shadow-[0_12px_32px_rgba(28,32,51,0.12)] pt-5 px-4 pb-4 grid gap-4" ref={ref}>
           <button className="absolute top-2 right-2 w-8 h-8 rounded-full bg-transparent text-ink-3 text-2xl leading-none inline-flex items-center justify-center cursor-pointer hover:bg-tint hover:text-ink" type="button" aria-label="Close" onClick={() => setOpen(false)}>×</button>
           <div className="grid gap-2"><span className="text-[13px] text-ink-3">{t.title}</span>
             <ol className="m-0 pl-[18px] text-sm leading-normal [&>li]:my-1">{t.steps.map((s, i) => <li key={i}>{s}</li>)}</ol>
