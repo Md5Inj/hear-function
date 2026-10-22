@@ -8,7 +8,7 @@ export function confirmPop(anchor, text) {
   return new Promise(resolve => {
     document.querySelectorAll('.confirm-pop').forEach(p => p.remove());
     const pop = document.createElement('div'); pop.className = 'confirm-pop';
-    pop.innerHTML = `<div class="confirm-text">${text}</div><div class="confirm-actions"><button class="btn mini" data-ok>Да</button><button class="btn quiet mini" data-no>Отмена</button></div>`;
+    pop.innerHTML = `<div class="confirm-text">${text}</div><div class="confirm-actions"><button class="btn mini" data-ok>Yes</button><button class="btn quiet mini" data-no>Cancel</button></div>`;
     document.body.appendChild(pop);
     const r = anchor.getBoundingClientRect(), b = pop.getBoundingClientRect();
     let left = r.left + r.width / 2 - b.width / 2; left = Math.max(8, Math.min(left, window.innerWidth - b.width - 8));

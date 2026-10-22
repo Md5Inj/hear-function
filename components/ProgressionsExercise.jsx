@@ -11,11 +11,16 @@ import HelpPopover from './HelpPopover';
 import LevelPath from './LevelPath';
 import LevelUpBanner from './LevelUpBanner';
 import { toast } from './ui';
+import { Button } from './ui/button';
+import * as EX from './ui/ex';
+import { useTranslations } from 'next-intl';
+import { cn } from '@/lib/utils';
 
 const isChrom = (sym, mode) => /\//.test(sym) || /^♭/.test(sym) || sym === 'N' || (mode === 'minor' && sym === 'I') || (mode === 'major' && sym === 'iv') || sym === 'vii°7';
 
 export default function ProgressionsExercise({ mode, mistakes, tonus }) {
   const { store, audio, logAnswer, weightedPick, settings } = useApp();
+  const tx = useTranslations('Ex');
   const [, rerender] = useReducer(x => x + 1, 0);
   const [levelUpOpen, setLevelUpOpen] = useState(false);
   const st = useRef({ q: null, answered: false, slots: [], sel: 0, lastEntry: null, autoTimer: null, unlocked: false, pendingAcc: null }).current;
@@ -28,7 +33,7 @@ export default function ProgressionsExercise({ mode, mistakes, tonus }) {
     const lvl = page.levelDef(), mode = page.mode;
     let pool = P.PROGRESSIONS.filter(p => p.mode === mode && (tonus ? p.level <= top : p.level === page.prog().level));  // тонус: все пройденные уровни
     if (mkRef.current.on) {
-      pool = (mkRef.current.items || []).filter(i => Array.isArray(i.truth)).map(i => P.PROGRESSIONS.find(p => p.mode === mode && JSON.stringify(p.chords) === JSON.stringify(i.truth)) || { mode, level: i.level, chords: i.truth, name: 'Из ваших ошибок', examples: [] });
+      pool = (mkRef.current.items || []).filter(i => Array.isArray(i.truth)).map(i => P.PROGRESSIONS.find(p => p.mode === mode && JSON.stringify(p.chords) === JSON.stringify(i.truth)) || { mode, level: i.level, chords: i.truth, name: 'From your mistakes', examples: [] });
       if (!pool.length) return null;
     }
     const entry = weightedPick(pool, p => (1 + 3 * Math.max(0, ...p.chords.map(c => page.errRate(T.parseToken(c).symbol)))) * (p === st.lastEntry && pool.length > 1 ? 0.25 : 1));
@@ -94,7 +99,7 @@ export default function ProgressionsExercise({ mode, mistakes, tonus }) {
         const diat = st.q.mode === 'major' ? ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'] : ['i', 'ii°', 'III', 'iv', 'V', 'VI', 'VII'];
         const flat = ['', 'N', '♭III', '', '', '♭VI', '♭VII'];
         const sym = acc === '♭' ? flat[d - 1] : diat[d - 1];
-        if (sym && page.levelDef().vocab.includes(sym)) fns.current.fill(sym); else toast(`${sym || 'Такого аккорда'} нет среди вариантов этого уровня`);
+        if (sym && page.levelDef().vocab.includes(sym)) fns.current.fill(sym); else toast(tx('noSuchChord', { x: sym || '—' }));
       }
       else if (ev.key === 'ArrowLeft' && st.q && !st.answered) { st.sel = Math.max(0, st.sel - 1); rerender(); }
       else if (ev.key === 'ArrowRight' && st.q && !st.answered) { st.sel = Math.min(st.slots.length - 1, st.sel + 1); rerender(); }
@@ -109,18 +114,18 @@ export default function ProgressionsExercise({ mode, mistakes, tonus }) {
   const where = q ? [q.entry.name].concat(q.entry.examples).filter(Boolean).join('; ') : '';
   return (
     <>
-      <SessionStrip session={session} noun="Вопрос" active={!!q} idle={mistakes && mk.loaded && !q} note={mistakes ? 'работа над ошибками' : tonus ? 'тонус' : null} right={<><MistakesBadge exercise="progressions" mode={mode} level={page.prog().level} href={'/progressions?mode=' + mode + '&mistakes=1'} on={!!mistakes} /><HelpPopover exercise="progressions" /><SettingsPopover ctx={page} showTimbre mistakes={{ on: !!mistakes, count: mk.count, tonus: !!tonus }} /></>} />
+      <SessionStrip session={session} noun={tx('question')} active={!!q} idle={mistakes && mk.loaded && !q} note={mistakes ? tx('mistakesNote') : tonus ? tx('tonusNote') : null} right={<><MistakesBadge exercise="progressions" mode={mode} level={page.prog().level} href={'/progressions?mode=' + mode + '&mistakes=1'} on={!!mistakes} /><HelpPopover exercise="progressions" /><SettingsPopover ctx={page} showTimbre mistakes={{ on: !!mistakes, count: mk.count, tonus: !!tonus }} /></>} />
       {!mistakes && !tonus && <LevelPath levels={page.levels()} level={page.prog().level} maxLevel={page.prog().maxLevel} history={(page.prog().byLevel || {})[Math.max(page.prog().maxLevel || 1, page.prog().level)] || page.prog().history} W={settings.levelUpWindow || 20} NEED={settings.levelUpNeed || 16} onSelect={n => page.setLevel(n)} collapsible />}
       {levelUpOpen && <LevelUpBanner ctx={page} onClose={() => setLevelUpOpen(false)} />}
       {mistakes && mk.loaded && !q && <MistakesEmpty href={'/progressions?mode=' + mode} />}
-      <section className="stage-mid" hidden={mistakes && mk.loaded && !q}>
-        <div className="actions"><button className="btn primary" onClick={() => play()}>Слушать</button></div>
-        <div className="part-line">Аккорды по тактам, после каденции</div>
+      <section className={EX.STAGE} hidden={mistakes && mk.loaded && !q}>
+        <div className={EX.ACTIONS}><Button variant="primary" size="primary" onClick={() => play()}>{tx('listen')}</Button></div>
+        <div className={EX.PARTLINE}>{tx('progLine')}</div>
         <div className="sheet-wrap"><div className="sheet">
           {q && q.chords.map((tok, i) => {
             if (answered) {
               const sym = T.parseToken(tok).symbol, ok = sym === slots[i];
-              return <button key={i} className={'slot ' + (ok ? 'correct' : 'wrong')} onClick={() => playChord(i)}><span>{T.displayToken(tok)}</span>{!ok && <small>ваш вариант: {slots[i]}</small>}</button>;
+              return <button key={i} className={'slot ' + (ok ? 'correct' : 'wrong')} onClick={() => playChord(i)}><span>{T.displayToken(tok)}</span>{!ok && <small>{tx('yourVariant', { x: slots[i] })}</small>}</button>;
             }
             return <button key={i} className={'slot' + (i === st.sel ? ' sel' : '')} onClick={() => { st.sel = i; rerender(); }}>{slots[i] ? <span>{slots[i]}</span> : <span className="q">?</span>}</button>;
           })}
@@ -128,13 +133,13 @@ export default function ProgressionsExercise({ mode, mistakes, tonus }) {
         <div className="vocab">
           {groups.map((g, gi) => g.length ? <div key={gi} className="vocab-group">{g.map(sym => <button key={sym} className="chord" disabled={answered} onClick={() => fill(sym)}>{sym}</button>)}</div> : null)}
         </div>
-        <div className="actions">
-          {!answered && <button className="btn primary" disabled={!q || slots.some(s => !s)} onClick={check}>Проверить</button>}
-          {answered && <button className="btn primary" onClick={() => next()}>Дальше</button>}
-          {answered && !all && <button className="btn" onClick={retry}>Исправить</button>}
+        <div className={EX.ACTIONS + ' mt-[22px]'}>
+          {!answered && <Button variant="primary" size="primary" disabled={!q || slots.some(s => !s)} onClick={check}>{tx('check')}</Button>}
+          {answered && <Button variant="primary" size="primary" onClick={() => next()}>{tx('next')}</Button>}
+          {answered && !all && <Button onClick={retry}>{tx('fix')}</Button>}
         </div>
-        <div className={'feedback' + (answered ? ' show ' + (all ? 'ok' : 'bad') : '')}>
-          {answered && <><div className="lead"><b>{all ? 'Верно.' : 'Не совсем.'}</b> {T.keyName(q.mode, q.tonicPc)}: {q.chords.map(c => T.letterName(q.mode, c, q.tonicPc)).join(' – ')}.</div>{where && <div className="meta">{where}.</div>}</>}
+        <div className={EX.feedbackCls(answered, all)}>
+          {answered && <><div className="text-lg"><b className="font-semibold">{all ? tx('yes') : tx('notQuite')}</b> {T.keyName(q.mode, q.tonicPc)}: {q.chords.map(c => T.letterName(q.mode, c, q.tonicPc)).join(' – ')}.</div>{where && <div className="text-ink-2 text-[15px] mt-1">{where}.</div>}</>}
         </div>
       </section>
     </>

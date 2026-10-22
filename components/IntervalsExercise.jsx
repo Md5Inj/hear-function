@@ -11,10 +11,15 @@ import HelpPopover from './HelpPopover';
 import LevelPath from './LevelPath';
 import LevelUpBanner from './LevelUpBanner';
 import { toast } from './ui';
+import { useTranslations } from 'next-intl';
+import { Button } from './ui/button';
+import * as EX from './ui/ex';
+import { cn } from '@/lib/utils';
 
 export default function IntervalsExercise({ mistakes, tonus }) {
   const mode = 'major';  // интервалы не зависят от лада; прогресс хранится под intervals.major
   const { store, audio, logAnswer, weightedPick, pick, settings } = useApp();
+  const tx = useTranslations('Ex');
   const [, rerender] = useReducer(x => x + 1, 0);
   const [levelUpOpen, setLevelUpOpen] = useState(false);
   const st = useRef({ q: null, answered: false, chosen: null, last: null, autoTimer: null, unlocked: false, pendingAcc: null }).current;
@@ -71,7 +76,7 @@ export default function IntervalsExercise({ mistakes, tonus }) {
       else if (/^[2-8]$/.test(ev.key) && q && !st.answered) {
         ev.preventDefault(); const n = +ev.key; const acc = st.pendingAcc; st.pendingAcc = null;
         const want = IV.INTERVALS.find(i => i.num === n && (acc === 'A' ? i.q === 'A' : acc === 'm' ? i.q === 'm' : (i.q === 'M' || i.q === 'P')));
-        if (want && q.level.semis.includes(want.semis)) answer(want.label); else if (want) toast(`${want.label} нет на этом уровне`);
+        if (want && q.level.semis.includes(want.semis)) answer(want.label); else if (want) toast(tx('intervalNotOnLevel', { x: want.disp }));
       }
     };
     document.addEventListener('keydown', onKey); return () => document.removeEventListener('keydown', onKey);
@@ -83,21 +88,21 @@ export default function IntervalsExercise({ mistakes, tonus }) {
   const noMistakes = mistakes && mk.loaded && !q;
   return (
     <>
-      <SessionStrip session={session} noun="Вопрос" active={!!q} idle={noMistakes} note={mistakes ? 'работа над ошибками' : tonus ? 'тонус' : null} right={<><MistakesBadge exercise="intervals" mode={mode} level={page.prog().level} href="/intervals?mistakes=1" on={!!mistakes} /><HelpPopover exercise="intervals" /><SettingsPopover ctx={page} showTimbre mistakes={{ on: !!mistakes, count: mk.count, tonus: !!tonus }} /></>} />
+      <SessionStrip session={session} noun={tx('question')} active={!!q} idle={noMistakes} note={mistakes ? tx('mistakesNote') : tonus ? tx('tonusNote') : null} right={<><MistakesBadge exercise="intervals" mode={mode} level={page.prog().level} href="/intervals?mistakes=1" on={!!mistakes} /><HelpPopover exercise="intervals" /><SettingsPopover ctx={page} showTimbre mistakes={{ on: !!mistakes, count: mk.count, tonus: !!tonus }} /></>} />
       {!mistakes && !tonus && <LevelPath levels={page.levels()} level={page.prog().level} maxLevel={page.prog().maxLevel} history={(page.prog().byLevel || {})[Math.max(page.prog().maxLevel || 1, page.prog().level)] || page.prog().history} W={settings.levelUpWindow || 20} NEED={settings.levelUpNeed || 16} onSelect={n => page.setLevel(n)} collapsible />}
       {levelUpOpen && <LevelUpBanner ctx={page} onClose={() => setLevelUpOpen(false)} />}
       {noMistakes && <MistakesEmpty href="/intervals" />}
-      <section className="stage-mid" hidden={noMistakes}>
-        <div className="actions"><button className="btn primary" onClick={() => play()}>Слушать</button></div>
-        <div className="part-line">{q ? (q.dir === 'harm' ? 'Какой интервал звучит? Ноты вместе' : q.dir === 'up' ? 'Какой интервал звучит? Снизу вверх' : 'Какой интервал звучит? Сверху вниз') : ''}</div>
-        <div className="keys">
+      <section className={EX.STAGE} hidden={noMistakes}>
+        <div className={EX.ACTIONS}><Button variant="primary" size="primary" onClick={() => play()}>{tx('listen')}</Button></div>
+        <div className={EX.PARTLINE}>{q ? (q.dir === 'harm' ? tx('intervalHarm') : q.dir === 'up' ? tx('intervalUp') : tx('intervalDown')) : ''}</div>
+        <div className={EX.KEYS}>
           {choices.map(i => (
-            <button key={i.label} className={'key' + (answered && i.label === q.iv.label ? ' correct' : '') + (answered && i.label === st.chosen && i.label !== q.iv.label ? ' wrong' : '')} disabled={answered} data-tip={i.name} onClick={() => answer(i.label)}>{i.label}</button>
+            <button key={i.label} className={cn(EX.KEY, answered && i.label === q.iv.label && EX.KEY_OK, answered && i.label === st.chosen && i.label !== q.iv.label && EX.KEY_BAD)} disabled={answered} data-tip={i.name} onClick={() => answer(i.label)}>{i.disp}</button>
           ))}
         </div>
-        {answered && <div className="actions" id="nextActions"><button className="btn primary" onClick={() => next()}>Дальше</button></div>}
-        <div className={'feedback' + (answered ? ' show ' + (correct ? 'ok' : 'bad') : '')}>
-          {answered && <div className="lead"><b>{correct ? 'Верно.' : 'Нет.'}</b> {q.iv.name}: {T.NOTE_NAMES[q.low % 12]}–{T.NOTE_NAMES[q.high % 12]}. <button className="link" onClick={play}>ещё раз</button></div>}
+        {answered && <div className={EX.ACTIONS + ' mt-[22px]'} id="nextActions"><Button variant="primary" size="primary" onClick={() => next()}>{tx('next')}</Button></div>}
+        <div className={EX.feedbackCls(answered, correct)}>
+          {answered && <div className="text-lg"><b className="font-semibold">{correct ? tx('yes') : tx('no')}</b> {q.iv.name}: {T.NOTE_NAMES[q.low % 12]}–{T.NOTE_NAMES[q.high % 12]}. <button className={EX.LINK} onClick={play}>{tx('again')}</button></div>}
         </div>
       </section>
     </>

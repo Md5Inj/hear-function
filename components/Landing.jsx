@@ -3,10 +3,13 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useApp } from './AppProvider';
+import { Button } from './ui/button';
 
 export function LandingCta() {
   const { store, openLogin } = useApp();
+  const t = useTranslations('Home');
   const params = useSearchParams(); const router = useRouter();
   const wantLogin = params.get('login'), next = params.get('next');
   useEffect(() => {
@@ -14,26 +17,27 @@ export function LandingCta() {
     if (store.user) { if (next) router.replace(next); else router.replace('/'); return; }
     openLogin(next);
   }, [wantLogin, next, store.user, openLogin, router]);
-  if (store.user) return <div className="landing-cta"><Link href="/songs" className="btn primary">Продолжить</Link><Link href="/progress" className="btn quiet">Мой путь</Link><Link href="/history" className="btn quiet">История</Link></div>;
-  return <div className="landing-cta"><button className="btn primary" onClick={() => openLogin()}>Начать</button><Link href="/guide" className="btn quiet">Как пользоваться</Link></div>;
+  if (store.user) return <div className="flex flex-wrap gap-3 justify-center mt-[26px]"><Button asChild variant="primary" size="primary"><Link href="/songs">{t('ctaContinue')}</Link></Button><Button asChild variant="quiet"><Link href="/progress">{t('ctaMyPath')}</Link></Button><Button asChild variant="quiet"><Link href="/history">{t('ctaHistory')}</Link></Button></div>;
+  return <div className="flex flex-wrap gap-3 justify-center mt-[26px]"><Button variant="primary" size="primary" onClick={() => openLogin()}>{t('ctaStart')}</Button><Button asChild variant="quiet"><Link href="/guide">{t('ctaHowTo')}</Link></Button></div>;
 }
 
 export function TermTip() {
+  const t = useTranslations('Home');
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (!open) return;
     const onClick = ev => { if (!ev.target.closest('.term-tip')) setOpen(false); };
     const onKey = ev => { if (ev.key === 'Escape') setOpen(false); };
-    const t = setTimeout(() => { document.addEventListener('click', onClick); document.addEventListener('keydown', onKey); }, 0);
-    return () => { clearTimeout(t); document.removeEventListener('click', onClick); document.removeEventListener('keydown', onKey); };
+    const id = setTimeout(() => { document.addEventListener('click', onClick); document.addEventListener('keydown', onKey); }, 0);
+    return () => { clearTimeout(id); document.removeEventListener('click', onClick); document.removeEventListener('keydown', onKey); };
   }, [open]);
   return (
     <>
-      <button className="term" onClick={ev => { ev.stopPropagation(); setOpen(o => !o); }}>тембровой слепоты</button>
+      <button className="term-tip-anchor underline decoration-dotted text-accent cursor-pointer bg-transparent border-0 p-0" onClick={ev => { ev.stopPropagation(); setOpen(o => !o); }}>{t('termWord')}</button>
       {open && (
-        <span className="term-tip">
-          <button className="modal-close" type="button" aria-label="Закрыть" onClick={() => setOpen(false)}>×</button>
-          <b>Тембровая слепота</b> — когда ступень или аккорд узнаются только в привычном звучании: на пианино функция слышна, а в гитаре, струнных или голосе на фоне плотной аранжировки теряется. Слух привязан к тембру и регистру, а не к функции звука в тональности.<br /><br />Здесь тембр меняется от вопроса к вопросу: семь инструментов в ступенях и прогрессиях, а в песнях настоящие записи с разной фактурой. Тональность тоже каждый раз другая, поэтому узнавание отвязывается от окраски звука.
+        <span className="term-tip absolute left-0 top-full mt-2 z-30 w-[360px] bg-paper border border-rule rounded-xl shadow-[0_12px_32px_rgba(28,32,51,0.12)] p-4 pt-5 text-[15px] text-ink leading-normal font-normal normal-case">
+          <button className="absolute top-2 right-2 w-8 h-8 rounded-full bg-transparent text-ink-3 text-2xl leading-none inline-flex items-center justify-center cursor-pointer hover:bg-tint hover:text-ink" type="button" aria-label="x" onClick={() => setOpen(false)}>×</button>
+          {t.rich('termBody', { b: c => <b>{c}</b>, br: () => <br /> })}
         </span>
       )}
     </>

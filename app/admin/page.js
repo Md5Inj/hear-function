@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { adminFromToken, adminPath } from '@/lib/api';
 import AdminPage from '@/components/AdminPage';
 import AdminLogin from '@/components/AdminLogin';
-export const metadata = { title: 'Админка — Тренажёр слуха' };
+export const metadata = { title: 'Admin — hear function' };
 export default async function Page({ searchParams }) {
   if (!adminPath()) notFound();
   const c = await cookies();

@@ -42,7 +42,7 @@ export default function AppProvider({ user, state, settings, children }) {
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       if (!store.user) return;
-      api('PUT', '/state', { settings: { mode: store.mode, timbre: store.timbre, autoNext: store.autoNext, songAutoNext: store.songAutoNext }, progress: store.progress }).catch(e => toast('Не удалось сохранить: ' + e.message));
+      api('PUT', '/state', { settings: { mode: store.mode, timbre: store.timbre, autoNext: store.autoNext, songAutoNext: store.songAutoNext }, progress: store.progress }).catch(e => toast('Failed to save: ' + e.message));
     }, 400);
   }, [store]);
   const logAnswer = useCallback(rec => { if (store.user) api('POST', '/answer', rec).catch(() => {}); if (rec.songId) store.seen.add(rec.exercise + ':' + rec.songId); }, [store]);
@@ -88,16 +88,16 @@ function LoginModal({ onClose, onDone }) {
   return (
     <div className="auth-overlay" onClick={ev => { if (ev.target === ev.currentTarget) onClose(); }}>
       <form className="auth-box" onSubmit={submit}>
-        <button className="modal-close" type="button" aria-label="Закрыть" data-tip="Закрыть" onClick={onClose}>×</button>
-        <div className="auth-title">Тренажёр слуха</div>
-        <div className="auth-sub">Войдите, чтобы прогресс и пройденные песни сохранялись.</div>
+        <button className="modal-close" type="button" aria-label="Close" data-tip="Close" onClick={onClose}>×</button>
+        <div className="auth-title">hear function</div>
+        <div className="auth-sub">Sign in so your progress and passed songs are saved.</div>
         <label>Email<input type="email" name="email" ref={emailRef} required autoComplete="email" /></label>
-        <label>Пароль<input type="password" name="password" required minLength={6} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} /></label>
-        {mode === 'register' && <label>Имя<input type="text" name="name" maxLength={60} /></label>}
+        <label>Password<input type="password" name="password" required minLength={6} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} /></label>
+        {mode === 'register' && <label>Name<input type="text" name="name" maxLength={60} /></label>}
         <div className="auth-err">{err}</div>
         <div className="auth-actions">
-          <button className="btn primary" type="submit">{mode === 'login' ? 'Войти' : 'Создать аккаунт'}</button>
-          <button className="link" type="button" onClick={() => { setMode(m => m === 'login' ? 'register' : 'login'); setErr(''); }}>{mode === 'login' ? 'Создать аккаунт' : 'У меня есть аккаунт'}</button>
+          <button className="btn primary" type="submit">{mode === 'login' ? 'Sign in' : 'Create account'}</button>
+          <button className="link" type="button" onClick={() => { setMode(m => m === 'login' ? 'register' : 'login'); setErr(''); }}>{mode === 'login' ? 'Create account' : 'I have an account'}</button>
         </div>
       </form>
     </div>

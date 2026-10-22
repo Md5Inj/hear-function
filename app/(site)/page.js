@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import Songs from '@/lib/songs-db';
 import P from '@/lib/progressions';
 import IV from '@/lib/intervals';
@@ -16,43 +17,44 @@ function status(progress, exercise, levels, st) {
   return ['major', 'minor'].map(mode => { const p = progress[exercise + '.' + mode]; if (!p || !p.total) return null; const top = Math.max(p.maxLevel || 1, p.level); return { mode, levels: levels[mode], level: top, maxLevel: top, history: (p.byLevel || {})[top] || p.history || [], W: st.levelUpWindow, NEED: st.levelUpNeed }; }).filter(Boolean);
 }
 export default async function Home() {
+  const t = await getTranslations('Home');
+  const nav = await getTranslations('Nav');
   const store = getStore();
   const chords = (await chordSongs(store)).filter(s => Songs.levelFor(s)), melodies = await melodySongs(store);
   const uniq = arr => new Set(arr.map(s => s.artist + ' — ' + s.title)).size;
   const byMode = (arr, m) => arr.filter(s => s.key.mode === m).length;
   const state = await currentState(); const progress = (state && state.progress) || {}; const st = await appSettings();
   const tiles = [
-    ['/degrees', '1 2 3 4 5 6 7', 'Ступени', 'Каденция задаёт тональность, затем звучит одна нота. Шесть групп ступеней, от тонического трезвучия до всех двенадцати звуков, в каждой четыре задачи: одна октава, разные октавы, в темпе, и то и другое.', status(progress, 'degrees', P.DEGREE_LEVELS, st)],
-    ['/intervals', 'ч5  б3  м7', 'Интервалы', 'Две ноты вверх, вниз или вместе. Группы интервалов по возрастанию, каждая четырьмя задачами: вверх, вниз, гармонически и смешанно. От секунд до септим и октавы, в конце все вместе.', status(progress, 'intervals', { major: IV.LEVELS, minor: IV.LEVELS }, st)],
-    ['/progressions', 'I – V – vi – IV', 'Прогрессии', 'Прогрессии из реальной музыки на пианино и других тембрах. От трёх главных трезвучий до септаккордов, обращений и побочных доминант.', status(progress, 'progressions', P.PROG_LEVELS, st)],
-    ['/songs', '♪ Em C G D', 'Аккорды песен', 'Фрагмент настоящей записи. Такты, выделение, цикл, замедление. Тринадцать уровней: каждый добавляет новый аккорд.', status(progress, 'songs', Songs.SONG_LEVELS, st)],
-    ['/melodies', '♪ 3 2 1 5', 'Мелодии песен', 'Вокальная фраза из записи, ступень каждой ноты. Каденция перед фразой задаёт тональность.', status(progress, 'melodies', Songs.SONG_LEVELS, st)],
+    ['/degrees', '1 2 3 4 5 6 7', nav('degrees'), t('tileDegreesText'), status(progress, 'degrees', P.DEGREE_LEVELS, st)],
+    ['/intervals', 'P5  M3  m7', nav('intervals'), t('tileIntervalsText'), status(progress, 'intervals', { major: IV.LEVELS, minor: IV.LEVELS }, st)],
+    ['/progressions', 'I – V – vi – IV', nav('progressions'), t('tileProgText'), status(progress, 'progressions', P.PROG_LEVELS, st)],
+    ['/songs', '♪ Em C G D', nav('songs'), t('tileSongsText'), status(progress, 'songs', Songs.SONG_LEVELS, st)],
+    ['/melodies', '♪ 3 2 1 5', nav('melodies'), t('tileMelText'), status(progress, 'melodies', Songs.SONG_LEVELS, st)],
   ];
   return (
     <>
       <section className="landing-hero one">
         <div>
-          <h1>Слышать функцию, а не ноту.</h1>
-          <p>Относительный слух на настоящей музыке: ступени лада, аккордовые прогрессии и фрагменты реальных записей. Тональность меняется в каждом вопросе, сложность растёт по мере верных ответов, пройденные песни не повторяются.</p>
-          <p className="hero-claim">Тренажёр помогает избавиться от <TermTip />.</p>
+          <h1>{t('heroTitle')}</h1>
+          <p>{t('heroText')}</p>
+          <p className="hero-claim">{t.rich('heroClaim', { term: () => <TermTip /> })}</p>
           <Suspense fallback={<div className="landing-cta" />}><LandingCta /></Suspense>
         </div>
       </section>
       <section className="stats">
-        <Stat name="Ступени" levels={P.DEGREE_GROUPS.major.length + ' групп по 4 задачи в каждом ладу'} num={12} label="ступеней с альтерациями" sub="каденция и одна нота, 7 тембров" />
-        <Stat name="Прогрессии" levels={P.PROG_LEVELS.major.length + ' уровней в каждом ладу'} num={P.PROGRESSIONS.length} label="прогрессий на пианино" sub={'мажор ' + P.PROGRESSIONS.filter(p => p.mode === 'major').length + ', минор ' + P.PROGRESSIONS.filter(p => p.mode === 'minor').length} />
-        <Stat name="Аккорды песен" levels={Songs.SONG_LEVELS.major.length + ' уровней в мажоре, ' + Songs.SONG_LEVELS.minor.length + ' в миноре'} num={chords.length} label="фрагментов записей" sub={uniq(chords) + ' песен · мажор ' + byMode(chords, 'major') + ', минор ' + byMode(chords, 'minor')} />
-        <Stat name="Мелодии песен" levels="без уровней, по ладу" num={melodies.length} label="вокальных фраз" sub={uniq(melodies) + ' песен · мажор ' + byMode(melodies, 'major') + ', минор ' + byMode(melodies, 'minor')} />
+        <Stat name={nav('degrees')} levels={t('statDegreesLevels', { n: P.DEGREE_GROUPS.major.length })} num={12} label={t('statDegreesLabel')} sub={t('statDegreesSub')} />
+        <Stat name={nav('progressions')} levels={t('statProgLevels', { n: P.PROG_LEVELS.major.length })} num={P.PROGRESSIONS.length} label={t('statProgLabel')} sub={t('statProgSub', { a: P.PROGRESSIONS.filter(p => p.mode === 'major').length, b: P.PROGRESSIONS.filter(p => p.mode === 'minor').length })} />
+        <Stat name={nav('songs')} levels={t('statSongsLevels', { a: Songs.SONG_LEVELS.major.length, b: Songs.SONG_LEVELS.minor.length })} num={chords.length} label={t('statSongsLabel')} sub={t('statSongsSub', { u: uniq(chords), a: byMode(chords, 'major'), b: byMode(chords, 'minor') })} />
+        <Stat name={nav('melodies')} levels={t('statMelLevels')} num={melodies.length} label={t('statMelLabel')} sub={t('statMelSub', { u: uniq(melodies), a: byMode(melodies, 'major'), b: byMode(melodies, 'minor') })} />
       </section>
-      <h2 className="section-title" id="exercises">Наши упражнения</h2>
+      <h2 className="section-title" id="exercises">{t('exercises')}</h2>
       <section className="choices">
-        {tiles.map(([href, glyph, title, text, st]) => (
+        {tiles.map(([href, glyph, title, text, stt]) => (
           <Link key={href} className="choice" href={href}>
             <div className="glyph">{glyph}</div>
             <h2>{title}</h2>
             <p>{text}</p>
-            <div className="status">{st.map(x => {
-              // процент прохождения лестницы: пройденные уровни плюс доля текущего (верных из нужных)
+            <div className="status">{stt.map(x => {
               const right = Math.min(x.history.reduce((a, b) => a + b, 0), x.NEED), n = x.levels.length;
               const pct = Math.min(100, Math.round(((x.level - 1) + (x.level >= n && right >= x.NEED ? 1 : right / x.NEED)) / n * 100));
               const r = 13, c = 2 * Math.PI * r;
@@ -60,7 +62,7 @@ export default async function Home() {
                 <div key={x.mode} className="tile-progress">
                   <svg className="tile-ring" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r={r} fill="none" stroke="var(--rule)" strokeWidth="3" /><circle cx="16" cy="16" r={r} fill="none" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)} transform="rotate(-90 16 16)" /></svg>
                   <div className="tile-progress-text">
-                    <div><b>{pct}%</b>{href !== '/intervals' && <span className="tile-mode">{x.mode === 'major' ? 'мажор' : 'минор'}</span>}</div>
+                    <div><b>{pct}%</b>{href !== '/intervals' && <span className="tile-mode">{x.mode === 'major' ? t('statusMajor') : t('statusMinor')}</span>}</div>
                     <small>{x.levels[x.level - 1].title}</small>
                   </div>
                 </div>
@@ -69,42 +71,30 @@ export default async function Home() {
           </Link>
         ))}
       </section>
-      <h2 className="section-title">Зачем это</h2>
+      <h2 className="section-title">{t('whyTitle')}</h2>
       <section className="why">
-        <div>
-          <h3>Слух, который работает в живой музыке</h3>
-          <p>Музыкант узнаёт аккорд не по абсолютной высоте, а по его роли в тональности: тоника, доминанта, субдоминанта. Это и есть функциональный слух. Он позволяет подобрать песню на слух, сыграть по цифровке, услышать, куда движется гармония, и импровизировать, не считая интервалы.</p>
-        </div>
-        <div>
-          <h3>Почему обычные тренажёры не дают этого</h3>
-          <p>Интервалы и аккорды на синтезаторе в изоляции учат узнавать звучание, а не функцию. В настоящей записи, где гитара, бас, голос и барабаны звучат одновременно, навык с «чистого» пианино часто не переносится: это и есть тембровая слепота. Здесь упражнения построены так, чтобы слух привязывался к функции, а не к окраске звука.</p>
-        </div>
-        <div>
-          <h3>Контекст прежде всего</h3>
-          <p>Перед каждым вопросом звучит каденция в тональности примера. Вы всегда знаете, где тоника, и определяете услышанное относительно неё, как это делает музыкант в ансамбле. Тональность меняется от вопроса к вопросу, поэтому запомнить абсолютную высоту не получится, работает только относительный слух.</p>
-        </div>
+        <div><h3>{t('why1h')}</h3><p>{t('why1p')}</p></div>
+        <div><h3>{t('why2h')}</h3><p>{t('why2p')}</p></div>
+        <div><h3>{t('why3h')}</h3><p>{t('why3p')}</p></div>
       </section>
-      <h2 className="section-title">Чем отличается от других тренажёров</h2>
+      <h2 className="section-title">{t('diffTitle')}</h2>
       <section className="diff">
-        <div className="diff-row head"><span /><span>Обычный тренажёр</span><span>Здесь</span></div>
-        <div className="diff-row"><span>Материал</span><span>синтезированные интервалы и аккорды</span><span>фрагменты настоящих записей с разметкой по тактам, выровненной по звуку и проверенной на слух</span></div>
-        <div className="diff-row"><span>Что определяете</span><span>интервал или тип аккорда</span><span>ступень и функцию аккорда в тональности, в том числе внутри реальной аранжировки</span></div>
-        <div className="diff-row"><span>Контекст</span><span>звук в пустоте</span><span>каденция перед каждым вопросом, тональность каждый раз другая</span></div>
-        <div className="diff-row"><span>Сложность</span><span>настраивается вручную</span><span>лестница уровней: новый аккорд открывается, когда предыдущие уже слышны уверенно</span></div>
-        <div className="diff-row"><span>Повторы</span><span>случайный набор</span><span>пройденные песни не повторяются, ошибки копятся в отдельный режим и отрабатываются до верного ответа</span></div>
-        <div className="diff-row"><span>Тембр</span><span>один инструмент</span><span>семь тембров в ступенях и прогрессиях, живые записи с разной фактурой в песнях</span></div>
+        <div className="diff-row head"><span /><span>{t('diffH1')}</span><span>{t('diffH2')}</span></div>
+        {[1, 2, 3, 4, 5, 6].map(i => (
+          <div key={i} className="diff-row"><span>{t(`diffR${i}k`)}</span><span>{t(`diffR${i}a`)}</span><span>{t(`diffR${i}b`)}</span></div>
+        ))}
       </section>
-      <h2 className="section-title">Как заниматься</h2>
+      <h2 className="section-title">{t('howTitle')}</h2>
       <section className="how" id="how">
-        <div><h3>По десять вопросов</h3><p>Упражнение идёт сериями по десять вопросов, это пять минут. Лучше две серии каждый день, чем час раз в неделю: слух растёт от регулярности.</p></div>
-        <div><h3>Снизу вверх</h3><p>Начинайте со ступеней на первом уровне, затем прогрессии, затем аккорды песен. Переход на следующий уровень открывается сам, когда из двадцати последних ответов шестнадцать верных.</p></div>
-        <div><h3>Ошибки важнее успехов</h3><p>Что вы спутали, сохраняется. Режим «Работа над ошибками» задаёт только это, пока вы не ответите верно. Загляните в него после каждой серии.</p></div>
+        <div><h3>{t('how1h')}</h3><p>{t('how1p')}</p></div>
+        <div><h3>{t('how2h')}</h3><p>{t('how2p')}</p></div>
+        <div><h3>{t('how3h')}</h3><p>{t('how3p')}</p></div>
       </section>
-      <h2 className="section-title">Что внутри</h2>
+      <h2 className="section-title">{t('insideTitle')}</h2>
       <section className="how" id="how2">
-        <div><h3>Контекст тональности</h3><p>Перед каждым фрагментом звучит каденция в тональности песни, поэтому вы определяете функцию, а не абсолютную высоту.</p></div>
-        <div><h3>Реальные записи</h3><p>Сотни фрагментов из хитов с разметкой по тактам, выровненной по звуку. Песни, которые вы уже проходили, больше не показываются.</p></div>
-        <div><h3>Постепенные уровни</h3><p>Первый уровень: тоника и доминанта. Дальше по одному аккорду: субдоминанта, vi, ii, септаккорды, побочные доминанты.</p></div>
+        <div><h3>{t('in1h')}</h3><p>{t('in1p')}</p></div>
+        <div><h3>{t('in2h')}</h3><p>{t('in2p')}</p></div>
+        <div><h3>{t('in3h')}</h3><p>{t('in3p')}</p></div>
       </section>
     </>
   );

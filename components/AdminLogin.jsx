@@ -13,11 +13,11 @@ export default function AdminLogin() {
   return (
     <section className="account">
       <form className="auth-box admin-login" onSubmit={submit}>
-        <div className="auth-title">Вход в админку</div>
-        <label>Логин<input name="login" required autoComplete="username" autoFocus /></label>
-        <label>Пароль<input type="password" name="password" required autoComplete="current-password" /></label>
+        <div className="auth-title">Admin sign-in</div>
+        <label>Login<input name="login" required autoComplete="username" autoFocus /></label>
+        <label>Password<input type="password" name="password" required autoComplete="current-password" /></label>
         <div className="auth-err">{err}</div>
-        <div className="auth-actions"><button className="btn primary" type="submit">Войти</button></div>
+        <div className="auth-actions"><button className="btn primary" type="submit">Sign in</button></div>
       </form>
     </section>
   );

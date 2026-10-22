@@ -11,9 +11,14 @@ import HelpPopover from './HelpPopover';
 import LevelPath from './LevelPath';
 import LevelUpBanner from './LevelUpBanner';
 import { toast } from './ui';
+import { useTranslations } from 'next-intl';
+import { Button } from './ui/button';
+import * as EX from './ui/ex';
+import { cn } from '@/lib/utils';
 
 export default function DegreesExercise({ mode, mistakes, tonus }) {
   const { store, audio, logAnswer, weightedPick, pick, settings } = useApp();
+  const tx = useTranslations('Ex');
   const [, rerender] = useReducer(x => x + 1, 0);
   const [levelUpOpen, setLevelUpOpen] = useState(false);
   const st = useRef({ q: null, answered: false, chosen: null, block: null, lastDegree: null, autoTimer: null, deadline: null, unlocked: false, pendingAcc: null }).current;
@@ -103,7 +108,7 @@ export default function DegreesExercise({ mode, mistakes, tonus }) {
         const semis = (T.SCALES[page.mode][d - 1] + (acc === '♭' ? -1 : acc === '♯' ? 1 : 0) + 12) % 12;
         const deg = T.DEGREES[page.mode].find(x => x.st === semis);
         if (!deg) return;
-        if (page.levelDef().degrees.includes(deg.label)) answer(deg.label); else toast(`Ступени ${deg.label} нет на этом уровне`);
+        if (page.levelDef().degrees.includes(deg.label)) answer(deg.label); else toast(tx('degreeNotOnLevel', { x: deg.label }));
       }
     };
     document.addEventListener('keydown', onKey); return () => document.removeEventListener('keydown', onKey);
@@ -115,24 +120,24 @@ export default function DegreesExercise({ mode, mistakes, tonus }) {
   const correct = answered && st.chosen === q.degree.label;
   return (
     <>
-      <SessionStrip session={session} noun="Вопрос" active={!!q} idle={mistakes && mk.loaded && !q} note={mistakes ? 'работа над ошибками' : tonus ? 'тонус' : null} right={<><MistakesBadge exercise="degrees" mode={mode} level={page.prog().level} href={'/degrees?mode=' + mode + '&mistakes=1'} on={!!mistakes} /><HelpPopover exercise="degrees" /><SettingsPopover ctx={page} showTimbre mistakes={{ on: !!mistakes, count: mk.count, tonus: !!tonus }} /></>} />
+      <SessionStrip session={session} noun={tx('question')} active={!!q} idle={mistakes && mk.loaded && !q} note={mistakes ? tx('mistakesNote') : tonus ? tx('tonusNote') : null} right={<><MistakesBadge exercise="degrees" mode={mode} level={page.prog().level} href={'/degrees?mode=' + mode + '&mistakes=1'} on={!!mistakes} /><HelpPopover exercise="degrees" /><SettingsPopover ctx={page} showTimbre mistakes={{ on: !!mistakes, count: mk.count, tonus: !!tonus }} /></>} />
       {!mistakes && !tonus && <LevelPath levels={page.levels()} level={page.prog().level} maxLevel={page.prog().maxLevel} history={(page.prog().byLevel || {})[Math.max(page.prog().maxLevel || 1, page.prog().level)] || page.prog().history} W={settings.levelUpWindow || 20} NEED={settings.levelUpNeed || 16} onSelect={n => page.setLevel(n)} collapsible />}
       {levelUpOpen && <LevelUpBanner ctx={page} onClose={() => setLevelUpOpen(false)} />}
       {mistakes && mk.loaded && !q && <MistakesEmpty href={'/degrees?mode=' + mode} />}
-      <section className="stage-mid" hidden={mistakes && mk.loaded && !q}>
-        <div className="actions">
-          <button className="btn primary" onClick={() => play()}>Слушать</button>
-          {q && q.playCadence && <button className="link" onClick={() => play({ noteOnly: true })}>только нота</button>}
+      <section className={EX.STAGE} hidden={mistakes && mk.loaded && !q}>
+        <div className={EX.ACTIONS}>
+          <Button variant="primary" size="primary" onClick={() => play()}>{tx('listen')}</Button>
+          {q && q.playCadence && <button className={EX.LINK} onClick={() => play({ noteOnly: true })}>{tx('noteOnly')}</button>}
         </div>
-        <div className="part-line">{q && q.fast ? `Какая ступень? Ответ в течение ${P.FAST_ANSWER} секунд после ноты` : 'Какая ступень звучит после каденции?'}</div>
-        <div className="keys">
+        <div className={EX.PARTLINE}>{q && q.fast ? tx('degreeFastQ', { n: P.FAST_ANSWER }) : tx('degreeQ')}</div>
+        <div className={EX.KEYS}>
           {keys.map(label => (
-            <button key={label} className={'key' + (/[♭♯♮]/.test(label) ? ' chrom' : '') + (answered && label === q.degree.label ? ' correct' : '') + (answered && label === st.chosen && label !== q.degree.label ? ' wrong' : '')} disabled={answered} onClick={() => answer(label)}>{label}</button>
+            <button key={label} className={cn(EX.KEY, /[♭♯♮]/.test(label) && EX.KEY_CHROM, answered && label === q.degree.label && EX.KEY_OK, answered && label === st.chosen && label !== q.degree.label && EX.KEY_BAD)} disabled={answered} onClick={() => answer(label)}>{label}</button>
           ))}
         </div>
-        {answered && <div className="actions" id="nextActions"><button className="btn primary" onClick={() => next()}>Дальше</button></div>}
-        <div className={'feedback' + (answered ? ' show ' + (correct ? 'ok' : 'bad') : '')}>
-          {answered && <div className="lead"><b>{correct ? 'Верно.' : st.chosen === null ? 'Не успели.' : 'Нет.'}</b> <span className="roman">{q.degree.label}</span>, {T.NOTE_NAMES[q.midi % 12]} в {T.keyName(q.mode, q.tonicPc)}. <button className="link" onClick={playResolution}>разрешение</button></div>}
+        {answered && <div className={EX.ACTIONS + ' mt-[22px]'} id="nextActions"><Button variant="primary" size="primary" onClick={() => next()}>{tx('next')}</Button></div>}
+        <div className={EX.feedbackCls(answered, correct)}>
+          {answered && <div className="text-lg"><b className="font-semibold">{correct ? tx('yes') : st.chosen === null ? tx('tooSlow') : tx('no')}</b> <span className={EX.ROMAN}>{q.degree.label}</span>, {T.NOTE_NAMES[q.midi % 12]} in {T.keyName(q.mode, q.tonicPc)}. <button className={EX.LINK} onClick={playResolution}>{tx('resolution')}</button></div>}
         </div>
       </section>
     </>

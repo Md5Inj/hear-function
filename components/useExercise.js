@@ -44,7 +44,7 @@ export function useExercise(cfg) {
       // правило выполнено на достигнутом уровне: открываем следующий, но пользователя не переключаем — он выберет сам
       if (p.level >= (p.maxLevel || 1) && p.level < ctx.levels().length && p.history.length >= W && p.history.reduce((a, b) => a + b, 0) >= NEED) { p.maxLevel = p.level + 1; p.byLevel[p.maxLevel] = p.byLevel[p.maxLevel] || []; levelUp = true; }
       save(); refresh();
-      if (levelUp) toast('Открыт уровень ' + p.maxLevel + ': ' + ctx.levels()[p.maxLevel - 1].title);
+      if (levelUp) toast('Level ' + p.maxLevel + ' unlocked: ' + ctx.levels()[p.maxLevel - 1].title);
       return levelUp;
     };
     ctx.setLevel = n => { const p = ctx.prog(); p.level = n; p.byLevel[n] = p.byLevel[n] || []; p.history = p.byLevel[n]; save(); refresh(); if (onReset.current) onReset.current(); };
@@ -55,4 +55,4 @@ export function useExercise(cfg) {
     return ctx;
   }, [cfg.exercise, mode, store, save, refresh, pick, app, W, NEED]);
 }
-function useExerciseApp() { const app = useApp(); if (!app) throw new Error('useExercise вне AppProvider'); return app; }
+function useExerciseApp() { const app = useApp(); if (!app) throw new Error('useExercise outside AppProvider'); return app; }

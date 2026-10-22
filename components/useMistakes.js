@@ -11,11 +11,9 @@ export function useMistakes(exercise, mode, on) {
   return { on: !!on, items, loaded: items != null, remove, count: items ? items.length : null };
 }
 export function MistakesEmpty({ href }) {
-  return <div className="qinfo"><div className="empty-state"><div className="lead">Ошибок не осталось.</div><div className="meta">Всё, что было отвечено неверно, вы уже исправили. <a href={href}>Вернуться к обычному режиму</a>.</div></div></div>;
+  return <div className="text-ink-2 text-[15px]"><div className="text-center py-14"><div className="font-serif text-2xl">No mistakes left.</div><div className="text-ink-2 mt-2">You have already fixed everything you answered incorrectly. <a className="text-accent hover:underline" href={href}>Back to normal mode</a>.</div></div></div>;
 }
 
-/* Красная кнопка у шестерёнки: сколько неисправленных ошибок на текущем уровне; ведёт в режим работы над ошибками */
-/* сколько неисправленных ошибок на уровне (level == null — во всём ладу) */
 export function useMistakeCount(exercise, mode, level) {
   const { api, tick } = useApp();
   const [items, setItems] = useState([]);
@@ -25,5 +23,5 @@ export function useMistakeCount(exercise, mode, level) {
 export function MistakesBadge({ exercise, mode, level, href, on }) {
   const n = useMistakeCount(exercise, mode, level);
   if (!n) return null;
-  return <a className={'btn mistakes-btn' + (on ? ' on' : '')} href={href} data-tip={on ? 'Вы в режиме работы над ошибками' : 'Открыть работу над ошибками для этого уровня'}>Работа над ошибками <b>{n}</b></a>;
+  return <a className="inline-flex items-center gap-1.5 bg-bad border border-bad text-white rounded-full px-3.5 py-[7px] text-sm hover:no-underline" href={href} data-tip={on ? "You're in Mistakes mode" : 'Open Mistakes for this level'}>Mistakes <b>{n}</b></a>;
 }

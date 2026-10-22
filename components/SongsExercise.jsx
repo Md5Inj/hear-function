@@ -5,6 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useReducer, useState } from 'react'
 import { useRouter } from 'next/navigation';
 import T from '@/lib/theory';
 import SB from '@/lib/songs-db';
+import { sectionEn } from '@/lib/sections';
 import { YTP as Y } from '@/lib/yt';
 import { useApp } from './AppProvider';
 import { useExercise } from './useExercise';
@@ -14,29 +15,22 @@ import HelpPopover from './HelpPopover';
 import LevelPath from './LevelPath';
 import LevelUpBanner from './LevelUpBanner';
 import { toast } from './ui';
+import { Button } from './ui/button';
+import * as EX from './ui/ex';
+import { useTranslations } from 'next-intl';
 
 const fmt = t => Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
 const isChrom = (sym, mode) => /\//.test(sym) || /^♭/.test(sym) || sym === 'N' || (mode === 'minor' && sym === 'I') || (mode === 'major' && sym === 'iv') || sym === 'vii°7';
 /* Единицы ответа: каждый аккорд разрезан по тактовым чертам, т.е. один слот = один такт (или часть такта при смене внутри него) */
-function buildUnits(song) {
-  const bpb = song.beatsPerBar || 4, beat = 60 / song.bpm, units = [];
-  let pos = 0;
-  song.chords.forEach((c, ci) => {
-    let left = c.beats != null ? c.beats : bpb;
-    while (left > 1e-6) {
-      const room = bpb - (pos % bpb); const take = Math.min(left, room);
-      units.push({ ci, beats: take, t0: song.start + pos * beat, t1: song.start + (pos + take) * beat, barStart: Math.abs(pos % bpb) < 1e-6, sym: T.parseToken(c.c).symbol, token: c.c });
-      pos += take; left -= take;
-    }
-  });
-  return units;
-}
-const advance = (slots, sel) => { const after = slots.findIndex((s, i) => !s && i > sel), any = slots.findIndex(s => !s); return after >= 0 ? after : any >= 0 ? any : Math.min(sel + 1, slots.length - 1); };
+function buildUnits(song) { return SB.barUnits(song).map(u => Object.assign(u, { sym: T.parseToken(u.c).symbol, token: u.c })); }
+/* после ответа курсор идёт на следующий такт по порядку; с последнего такта — на первый пустой, если он есть */
+const advance = (slots, sel) => { if (sel + 1 < slots.length) return sel + 1; const any = slots.findIndex(s => !s); return any >= 0 ? any : sel; };
 
 export default function SongsExercise({ task, mode, forcedSong, review, mistakes, tonus }) {
   const TASK = task; const isMel = TASK === 'melody';
   const R = review || null;  // режим проверки в админке: заданная песня, полный словарь, без прогресса и истории
   const app = useApp(); const { store, audio, logAnswer, weightedPick, loadSongs, settings } = app;
+  const tx = useTranslations('Ex');
   const router = useRouter();
   const [, rerender] = useReducer(x => x + 1, 0);
   const [levelUpOpen, setLevelUpOpen] = useState(false);
@@ -184,7 +178,7 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
       const q = st.q; if (!q) return;
       st.unavailable.add(q.song.id);
       const byIp = /^\d+\.\d+\.\d+\.\d+$/.test(window.location.hostname);
-      toast(byIp ? 'YouTube не играет по IP-адресу: откройте сайт через localhost' : `Ролик не загрузился (${Y.ERRORS[code] || 'ошибка ' + code}), беру другую песню`);
+      toast(byIp ? tx('ipToast') : `Video failed to load (${Y.ERRORS[code] || 'error ' + code}), picking another song`);
       // песня пропускается только в этой сессии: ошибка ролика бывает временной и зависит от браузера, в базу ничего не пишем
       clearTimeout(st.autoTimer); st.autoTimer = setTimeout(() => fns.current.next(), 800);
     });
@@ -199,7 +193,7 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
     return () => { alive = false; clearInterval(tick); clearTimeout(st.autoTimer); clearTimeout(st.cadenceTimer); Y.destroy(); if (playerHost.current) playerHost.current.innerHTML = ''; document.body.classList.remove('dock'); delete document.body.dataset.task; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   /* режим проверки: сетка (начало, темп) правится на лету — пересобираем вопрос без пересоздания плеера */
-  const gridKey = R ? `${R.song.start}|${R.song.bpm}|${R.song.id}` : '';
+  const gridKey = R ? `${R.song.start}|${R.song.bpm}|${R.song.id}|${R.song.chords.map(c => c.c + ':' + (c.beats || '') + ':' + (c.t || '') + ':' + (c.dur || '')).join(',')}` : '';
   const firstGrid = useRef(gridKey);
   useEffect(() => {
     if (!R || firstGrid.current === gridKey || !loaded) return;
@@ -253,7 +247,7 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
           const deg = T.DEGREES[q.mode].find(x => x.st === s); if (deg) f.fillMel(deg.label);
         } else if (q.chords) {
           const diat = q.mode === 'major' ? ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'] : ['i', 'ii°', 'III', 'iv', 'V', 'VI', 'VII'];
-          const sym = diat[d - 1]; if (q.vocab.includes(sym)) f.fillChord(sym); else toast(`${sym} нет среди вариантов этого уровня`);
+          const sym = diat[d - 1]; if (q.vocab.includes(sym)) f.fillChord(sym); else toast(tx('noSuchChord', { x: sym }));
         }
       }
       else if ((ev.key === '%' || ev.key === 'r' || ev.key === 'к') && q && q.chords && !st.answered && !ev.ctrlKey && !ev.metaKey) { ev.preventDefault(); if (st.selChord > 0 && st.chordSlots[st.selChord - 1]) f.fillChord(st.chordSlots[st.selChord - 1]); }
@@ -288,7 +282,7 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
   const exhausted = !R && !mistakes && !tonus && empty && allDone();  // песни уровня есть, но все пройдены
   const noMistakes = mistakes && mk.loaded && loaded && !q;
   let where = '';
-  if (empty) { const counts = {}; allSongs().filter(x => (!isMel || (x.melody && x.melody.degrees.length))).forEach(x => { const k = (x.key.mode === 'major' ? 'мажор' : 'минор') + (isMel ? '' : ' ' + x.level); counts[k] = (counts[k] || 0) + 1; }); where = Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0], 'ru', { numeric: true })).map(([k, n]) => `${k}: ${n}`).join(', '); }
+  if (empty) { const counts = {}; allSongs().filter(x => (!isMel || (x.melody && x.melody.degrees.length))).forEach(x => { const k = (x.key.mode === 'major' ? 'major' : 'minor') + (isMel ? '' : ' ' + x.level); counts[k] = (counts[k] || 0) + 1; }); where = Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0], 'en', { numeric: true })).map(([k, n]) => `${k}: ${n}`).join(', '); }
 
   function slot(i, mel) {
     const sel = mel ? (i === st.selMel && st.active === 'melody') : (i === st.selChord && st.active === 'chords');
@@ -305,46 +299,46 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
     const given = mel ? st.melSlots[i] : st.chordSlots[i];
     if (answered) {
       const ok = truth === given;
-      return <button key={i} className={cls + (ok ? ' correct' : ' wrong')} style={style} onClick={() => { if (!mel) playBar(i); }}><span>{shown}</span>{!ok && <small>ваш вариант: {given}</small>}</button>;
+      return <button key={i} className={cls + (ok ? ' correct' : ' wrong')} style={style} onClick={() => { if (!mel) playBar(i); }}><span>{shown}</span>{!ok && <small>your answer: {given}</small>}</button>;
     }
     return <button key={i} className={cls} style={style} onClick={ev => { if (mel) st.selMel = i; else { if (ev.shiftKey) { if (st.anchor == null) st.anchor = st.selChord; } else st.anchor = null; st.selChord = i; } st.active = mel ? 'melody' : 'chords'; st.transport = !mel; rerender(); }}>{given ? <span>{given}</span> : <span className="q">?</span>}</button>;
   }
 
   return (
     <>
-      {!R && <SessionStrip session={session} noun="Песня" active={!!q} idle={loaded && !q} note={mistakes ? 'работа над ошибками' : tonus ? 'тонус' : (q && st.repeat && allDone() ? 'повтор пройденных' : null)} right={<><MistakesBadge exercise={isMel ? 'melodies' : 'songs'} mode={mode} level={isMel ? null : page.prog().level} href={(isMel ? '/melodies' : '/songs') + '?mode=' + mode + '&mistakes=1'} on={!!mistakes} /><HelpPopover exercise={isMel ? 'melodies' : 'songs'} /><SettingsPopover ctx={page} hidden={isMel && !mistakes} mistakes={{ on: !!mistakes, count: mk.count, tonus: isMel ? null : !!tonus }} /></>} />}
+      {!R && <SessionStrip session={session} noun={tx('song')} active={!!q} idle={loaded && !q} note={mistakes ? tx('mistakesNote') : tonus ? tx('tonusNote') : (q && st.repeat && allDone() ? tx('repeatNote') : null)} right={<><MistakesBadge exercise={isMel ? 'melodies' : 'songs'} mode={mode} level={isMel ? null : page.prog().level} href={(isMel ? '/melodies' : '/songs') + '?mode=' + mode + '&mistakes=1'} on={!!mistakes} /><HelpPopover exercise={isMel ? 'melodies' : 'songs'} /><SettingsPopover ctx={page} hidden={isMel && !mistakes} mistakes={{ on: !!mistakes, count: mk.count, tonus: isMel ? null : !!tonus }} /></>} />}
       {!R && !isMel && !mistakes && !tonus && <LevelPath levels={page.levels()} level={page.prog().level} maxLevel={page.prog().maxLevel} history={(page.prog().byLevel || {})[Math.max(page.prog().maxLevel || 1, page.prog().level)] || page.prog().history} W={settings.levelUpWindow || 20} NEED={settings.levelUpNeed || 16} onSelect={n => page.setLevel(n)} collapsible />}
       {levelUpOpen && <LevelUpBanner ctx={page} onClose={() => setLevelUpOpen(false)} />}
       {noMistakes && <MistakesEmpty href={(isMel ? '/melodies' : '/songs') + '?mode=' + mode} />}
-      <section className="stage-mid">
-        {ipWarning && <div className="qinfo"><div className="empty-state"><div className="lead">YouTube не играет музыку со страниц, открытых по IP-адресу.</div><div className="meta">Откройте сайт через <a href={'http://localhost:' + window.location.port + window.location.pathname}>localhost</a>: по IP каждый ролик будет заканчиваться ошибкой.</div></div></div>}
+      <section className={EX.STAGE}>
+        {ipWarning && <div className="qinfo"><div className="empty-state"><div className="lead">{tx('ipWarn')}</div><div className="meta">{tx.rich('ipWarnOpen', { a: c => <a href={'http://localhost:' + window.location.port + window.location.pathname}>{c}</a> })}</div></div></div>}
         {!loaded && <div className="skeleton"><div className="sk-row" /><div className="sk-chips"><i /><i /><i /><i /><i /></div><div className="sk-btn" /></div>}
         {exhausted && (
           <div className="qinfo"><div className="empty-state">
-            <div className="lead">{isMel ? 'Все мелодии этого лада пройдены.' : 'Все песни этого уровня пройдены.'}</div>
-            <div className="meta">Новые песни добавляются в корпус. Другой уровень выбирается в настройках (шестерёнка).</div>
+            <div className="lead">{isMel ? tx('melDone') : tx('songsDone')}</div>
+            <div className="meta">{tx('corpusHint')}</div>
             <div className="actions" style={{ marginTop: 16 }}>
-              <button className="btn primary" onClick={() => { st.repeat = true; next(); }}>Повторить пройденные</button>
-              {mistakeCount > 0 && <a className="btn quiet" href={(isMel ? '/melodies' : '/songs') + '?mode=' + mode + '&mistakes=1'}>Работа над ошибками ({mistakeCount})</a>}
+              <Button variant="primary" size="primary" onClick={() => { st.repeat = true; next(); }}>{tx('repeatPassed')}</Button>
+              {mistakeCount > 0 && <Button variant="quiet" asChild><a href={(isMel ? '/melodies' : '/songs') + '?mode=' + mode + '&mistakes=1'}>{tx('mistakesBtn', { n: mistakeCount })}</a></Button>}
             </div>
           </div></div>
         )}
-        {!R && !mistakes && empty && !exhausted && <div className="qinfo"><div className="empty-state"><div className="lead">{isMel ? 'Для этого лада мелодий пока нет.' : 'Для этого лада и уровня песен пока нет.'}</div><div className="meta">{where ? 'Есть: ' + where + '. Лад меняется в меню, уровень в настройках (шестерёнка).' : 'Корпус ещё пополняется.'}</div></div></div>}
+        {!R && !mistakes && empty && !exhausted && <div className="qinfo"><div className="empty-state"><div className="lead">{isMel ? tx('melEmpty') : tx('songsEmpty')}</div><div className="meta">{where ? tx('availHint', { where }) : tx('corpusGrowing')}</div></div></div>}
         {q && q.chords && (
           <div id="chordsBlock" ref={chordsRef}>
             <div className="sheet-wrap"><div className="sheet rows" ref={sheetRef}>{rows.map((r, ri) => <div key={ri} className="sheet-row">{r.map(i => slot(i, false))}</div>)}</div></div>
             {st.transport && !answered && (
               <div className="sel-pop" ref={trRef}>
-                <button className="btn quiet mini" onClick={playSelection}>{ra === rb ? `▶ такт ${bars(ra)}` : `▶ такты ${bars(ra)}–${bars(rb)}`}</button>
-                <button className={'btn quiet mini' + (st.loopOn ? ' active' : '')} data-tip="Зациклить (L)" onClick={toggleLoop}>⟲ цикл</button>
-                <button className={'btn quiet mini' + (st.rate === 0.5 ? ' active' : '')} data-tip="Половинная скорость" onClick={() => { st.rate = st.rate === 0.5 ? 1 : 0.5; Y.rate(st.rate); rerender(); }}>{st.rate === 0.5 ? '0.5× ✓' : '0.5×'}</button>
+                <button className="btn quiet mini" onClick={playSelection}>{ra === rb ? tx('playBar', { n: bars(ra) }) : tx('playBars', { a: bars(ra), b: bars(rb) })}</button>
+                <button className={'btn quiet mini' + (st.loopOn ? ' active' : '')} data-tip={tx('loopTip')} onClick={toggleLoop}>{tx('loop')}</button>
+                <button className={'btn quiet mini' + (st.rate === 0.5 ? ' active' : '')} data-tip={tx('halfTip')} onClick={() => { st.rate = st.rate === 0.5 ? 1 : 0.5; Y.rate(st.rate); rerender(); }}>{st.rate === 0.5 ? '0.5× ✓' : '0.5×'}</button>
               </div>
             )}
             <div className="vocab">
               {groups.map((g, gi) => g.length ? (
                 <div key={gi} className="vocab-group">
                   {g.map(sym => <button key={sym} className="chord" disabled={answered} onClick={() => fillChord(sym)}>{sym}</button>)}
-                  {gi === 0 && <button className="chord repeat" data-tip="Как в предыдущем такте" disabled={answered} onClick={() => { if (st.selChord > 0 && st.chordSlots[st.selChord - 1]) fillChord(st.chordSlots[st.selChord - 1]); }}>%</button>}
+                  {gi === 0 && <button className="chord repeat" data-tip={tx('repeatTip')} disabled={answered} onClick={() => { if (st.selChord > 0 && st.chordSlots[st.selChord - 1]) fillChord(st.chordSlots[st.selChord - 1]); }}>%</button>}
                 </div>
               ) : null)}
             </div>
@@ -352,24 +346,24 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
         )}
         {q && q.melody && (
           <div id="melodyBlock" className={st.melPlaying ? 'playing' : ''}>
-            {!isMel && <div className="part-line"><button className="link" onClick={playPhrase}>слушать фразу</button></div>}
+            {!isMel && <div className={EX.PARTLINE}><button className={EX.LINK} onClick={playPhrase}>{tx('listenPhrase')}</button></div>}
             <div className="sheet-wrap"><div className="sheet notes rows">{Array.from({ length: Math.ceil(s.melody.degrees.length / 4) }, (_, ri) => <div key={ri} className="sheet-row">{s.melody.degrees.slice(ri * 4, ri * 4 + 4).map((d, j) => slot(ri * 4 + j, true))}</div>)}</div></div>
             <div className="keys">{T.DEGREES[q.mode].map(d => <button key={d.label} className={'key small' + (/[♭♯♮]/.test(d.label) ? ' chrom' : '')} disabled={answered} onClick={() => fillMel(d.label)}>{d.label}</button>)}</div>
           </div>
         )}
         {q && (
-          <div className="actions" id="answerActions">
-            {!answered && <button className="btn primary" disabled={!complete()} onClick={check}>Проверить</button>}
-            {answered && <button className="btn primary" onClick={next}>{R ? 'Следующая' : 'Дальше'}</button>}
-            {answered && !all && <button className="btn" onClick={retry}>Исправить</button>}
+          <div className={EX.ACTIONS} id="answerActions">
+            {!answered && <Button variant="primary" size="primary" disabled={!complete()} onClick={check}>{tx('check')}</Button>}
+            {answered && <Button variant="primary" size="primary" onClick={next}>{R ? tx('nextSong') : tx('next')}</Button>}
+            {answered && !all && <Button onClick={retry}>{tx('fix')}</Button>}
           </div>
         )}
-        <div className={'feedback' + (answered ? ' show ' + (all ? 'ok' : 'bad') : '')}>
+        <div className={EX.feedbackCls(answered, all)}>
           {answered && (
             <>
-              <div className="lead"><b>{all ? 'Верно.' : 'Не совсем.'}</b> {T.keyName(s.key.mode, s.key.tonic)}{q.chords ? ': ' + s.chords.map(c => T.letterName(s.key.mode, c.c, s.key.tonic)).join(' – ') : ''}.</div>
-              {q.melody && <div className="meta">Ноты мелодии: {s.melody.degrees.map(d => T.NOTE_NAMES[(s.key.tonic + T.degreeByLabel(s.key.mode, d).st) % 12]).join(' ')}.</div>}
-              <div className="meta">На пианино: <button className="link" onClick={() => q.chords ? playChordsSynth(st.chordSlots) : playDegreesSynth(st.melSlots)}>ваш вариант</button> · <button className="link" onClick={() => q.chords ? playChordsSynth(q.units.map(u => u.sym)) : playDegreesSynth(s.melody.degrees)}>правильный</button></div>
+              <div className="text-lg"><b className="font-semibold">{all ? tx('yes') : tx('notQuite')}</b> {T.keyName(s.key.mode, s.key.tonic)}{q.chords ? ': ' + s.chords.map(c => T.letterName(s.key.mode, c.c, s.key.tonic)).join(' – ') : ''}.</div>
+              {q.melody && <div className="text-ink-2 text-[15px] mt-1">{tx('melodyNotes', { notes: s.melody.degrees.map(d => T.NOTE_NAMES[(s.key.tonic + T.degreeByLabel(s.key.mode, d).st) % 12]).join(' ') })}</div>}
+              <div className="text-ink-2 text-[15px] mt-0.5">{tx('onPiano')} <button className={EX.LINK} onClick={() => q.chords ? playChordsSynth(st.chordSlots) : playDegreesSynth(st.melSlots)}>{tx('yourVar')}</button> · <button className={EX.LINK} onClick={() => q.chords ? playChordsSynth(q.units.map(u => u.sym)) : playDegreesSynth(s.melody.degrees)}>{tx('correctVar')}</button></div>
             </>
           )}
         </div>
@@ -378,13 +372,13 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
         <div className="dock-inner">
           <div className="player dock-player" ref={playerHost} />
           <div className="dock-info">
-            <div className="song-title"><span>{s ? s.title : ''}</span> <span className="info up" tabIndex={0}>?<span className="tip">{s ? (isMel && s.melody ? `Фраза ${fmt(s.melody.start)}–${fmt(s.melody.end)}, ${s.melody.degrees.length} нот. «Слушать»: каденция в тональности песни, затем фраза. Ответ: ступень каждой ноты по порядку.` : `Фрагмент ${fmt(s.start)}–${fmt(s.end)}, ${q.units.filter(u => u.barStart).length} тактов. «Слушать»: каденция в тональности песни, затем запись. Клик по такту играет только его. Знак % повторяет аккорд предыдущего такта.`) : ''}</span></span></div>
-            <div className="song-meta">{s ? s.artist + (s.section ? ', ' + s.section.replace(/^(\S)/, m => m.toLowerCase()) : '') : ''}</div>
+            <div className="song-title"><span>{s ? s.title : ''}</span> <span className="info up" tabIndex={0}>?<span className="tip">{s ? (isMel && s.melody ? tx('phraseInfo', { start: fmt(s.melody.start), end: fmt(s.melody.end), n: s.melody.degrees.length }) : tx('fragmentInfo', { start: fmt(s.start), end: fmt(s.end), n: q.units.filter(u => u.barStart).length })) : ''}</span></span></div>
+            <div className="song-meta">{s ? s.artist + (s.section ? ', ' + sectionEn(s.section).replace(/^(\S)/, m => m.toLowerCase()) : '') : ''}</div>
           </div>
           <div className="dock-controls">
-            <button className="btn primary" onClick={() => playFragment()}>▶ Слушать</button>
-            <button className="btn quiet" data-tip="Тонический аккорд (T)" onClick={() => q && playCadence(false)}>Тоника</button>
-            <button className="btn quiet" data-tip="Запись без каденции" onClick={() => playFragment({ noCadence: true })}>Без каденции</button>
+            <Button variant="primary" size="primary" onClick={() => playFragment()}>{tx('listenBtn')}</Button>
+            <Button variant="quiet" data-tip={tx('tonicTip')} onClick={() => q && playCadence(false)}>{tx('tonicBtn')}</Button>
+            <Button variant="quiet" data-tip={tx('noCadenceTip')} onClick={() => playFragment({ noCadence: true })}>{tx('noCadenceBtn')}</Button>
           </div>
         </div>
       </div>
