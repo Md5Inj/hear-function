@@ -11,7 +11,7 @@ export default function GridTimeline({ song, bars, setBars, editable, vocab, onC
   const start = bars[0].t, end = bars[bars.length - 1].t + bars[bars.length - 1].dur, dur = end - start, pad = Math.max(2.5, dur * (editable ? 0.2 : 0.4));  // в редакторе фрагменту отдаём больше ширины
   const win0 = Math.max(0, start - pad), win1 = end + pad, winLen = win1 - win0;
   const ref = useRef(null); const [playT, setPlayT] = useState(null); const [playing, setPlaying] = useState(false); const [vdur, setVdur] = useState(0); const [pos, setPos] = useState(0);
-  const drag = useRef(null); const [locked, setLocked] = useState(true); const scrubRef = useRef(null); const scrubbing = useRef(false); const seekAt = useRef(0);  // после перемотки позицию плеера не читаем, пока он не перескочил
+  const drag = useRef(null); const [locked, setLocked] = useState(false); const scrubRef = useRef(null); const scrubbing = useRef(false); const seekAt = useRef(0);  // после перемотки позицию плеера не читаем, пока он не перескочил
   const scrubT = clientX => { const r = scrubRef.current.getBoundingClientRect(); const f = Math.max(0, Math.min(1, (clientX - r.left) / r.width)); return xToTime(f); };  // клик над тактом N попадает в такт N
   const xOf = t => (t - win0) / winLen * 100;
   // позиция по реальному времени: доля полосы (0..1) <-> секунды в окне win0..win1
@@ -59,9 +59,6 @@ export default function GridTimeline({ song, bars, setBars, editable, vocab, onC
       {editable && (
         <div className="gtl-transport">
           {playBtn}
-          <button type="button" className="gtl-ic on" onClick={() => { if (playing) Y.pause(); else if (Y.currentId === song.youtube && Y.ready) Y.resume(total); else goTo(pos || start); }} data-tip={playing ? 'Pause' : 'Play from current position'}>
-            {playing ? <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z" /></svg> : <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z" /></svg>}
-          </button>
           <span className="gtl-time">{fmt2(pos)}</span>
           <span style={{ flex: 1 }} />
           {lockBtn}
@@ -101,7 +98,6 @@ export default function GridTimeline({ song, bars, setBars, editable, vocab, onC
         <div className="gtl-handle" style={{ left: xOf(end) + '%' }} onPointerDown={ev => down(ev, 'last')} title="Drag to change the length of the last bar" />
         {playT != null && playT >= start && playT <= end && <div className="gtl-head" style={{ left: xOf(playT) + '%' }} />}
       </div>
-      {editable && <div className="gtl-foot"><span className="gtl-hint">Drag a bar border to move it, drag the grid to shift all bars, the side handles for start and length. The lock stretches all bars together. Need exact numbers? Use "Exact values".</span></div>}
     </div>
   );
 }
