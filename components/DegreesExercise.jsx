@@ -48,7 +48,7 @@ export default function DegreesExercise({ mode, mistakes, tonus }) {
     return q;
   }
   function play(opts) {
-    const q = st.q; if (!q) return;
+    const q = st.q; if (!q) return; try { audio().stopAll(); } catch (e) { /* без звука на сервере */ }  // новый звук глушит предыдущий
     opts = opts || {}; st.unlocked = true;
     const e = audio(); let t = e.ctx.currentTime + 0.1;
     // в темпе: каденция вдвое короче, нота сразу за ней, на ответ FAST_ANSWER секунд с момента ноты
@@ -61,6 +61,7 @@ export default function DegreesExercise({ mode, mistakes, tonus }) {
     if (q.fast && !st.deadline && !st.answered) st.deadline = setTimeout(() => fns.current.answer(null), (t - e.ctx.currentTime + P.FAST_ANSWER) * 1000);
   }
   function playResolution() {
+    try { audio().stopAll(); } catch (e) { /* без звука на сервере */ } 
     const q = st.q; const e = audio();
     const scale = T.SCALES[q.mode].slice();
     if (q.mode === 'minor' && q.degree.st === 11) scale[6] = 11;

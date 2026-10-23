@@ -48,7 +48,7 @@ export default function ProgressionsExercise({ mode, mistakes, tonus }) {
     return q;
   }
   function play() {
-    const q = st.q; if (!q) return; st.unlocked = true;
+    const q = st.q; if (!q) return; st.unlocked = true; try { audio().stopAll(); } catch (e) { /* без звука на сервере */ }  // новый звук глушит предыдущий
     const e = audio(); let t = e.ctx.currentTime + 0.1;
     q.hint.forEach((c, i) => { const d = q.keyHint === 'cadence' ? (i === q.hint.length - 1 ? 0.9 : 0.6) : 1.0; e.playChord(q.timbre, c.notes, t, d); t += d; });
     t += 0.7;

@@ -89,7 +89,9 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
     return { song, units: buildUnits(song), mode: page.mode, vocab, chords: wantChords(), melody: !!wantMelody(song) };
   }
   const unitSpan = i => [st.q.units[i].t0, st.q.units[i].t1];
+  const stopSound = () => { try { audio().stopAll(); } catch (e) { /* без звука на сервере */ } };
   function playCadence(full) {
+    stopSound();  // новая каденция глушит то, что ещё звучит
     const q = st.q; const e = audio(); let t = e.ctx.currentTime + 0.05;
     const mode = q.song.key.mode, tonic = q.song.key.tonic;
     const chords = full ? T.CADENCE[mode] : [T.CADENCE[mode][0]];
@@ -99,11 +101,16 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
   const playRangeOf = s => isMel && s.melody ? [s.melody.start, s.melody.end] : [s.start, s.end];
   function playFragment(opts) {
     const q = st.q; if (!q) return;
-    opts = opts || {}; st.played = true; clearTimeout(st.cadenceTimer);
+    opts = opts || {}; st.played = true; clearTimeout(st.cadenceTimer); stopSound();
     const s = q.song; const [a, b] = playRangeOf(s);
     if (opts.noCadence) return Y.playRange(s.youtube, a, b);
-    const cadenceEnd = performance.now() + playCadence(true) * 1000 + 300;
-    Y.prepare(s.youtube, a, b).then(() => { if (st.q && st.q.song !== s) return; st.cadenceTimer = setTimeout(() => Y.resume(b), Math.max(0, cadenceEnd - performance.now())); });
+    // каденцию играем только когда ясно, что ролик загрузился; недоступная песня каденцию не получает
+    const token = st.playToken = (st.playToken || 0) + 1;
+    Y.prepare(s.youtube, a, b).then(ok => {
+      if (!ok || st.playToken !== token || !st.q || st.q.song.youtube !== s.youtube) return;
+      const dur = playCadence(true);
+      st.cadenceTimer = setTimeout(() => { if (st.playToken === token) Y.resume(b); }, dur * 1000 + 300);
+    });
   }
   function playBar(i) { clearTimeout(st.cadenceTimer); const [a, b] = unitSpan(i); Y.playRange(st.q.song.youtube, a, b); }
   function selRange() { const a = st.anchor == null ? st.selChord : Math.min(st.anchor, st.selChord), b = st.anchor == null ? st.selChord : Math.max(st.anchor, st.selChord); return [a, b]; }
@@ -114,13 +121,13 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
     Y.playRange(q.song.youtube, q.units[ra].t0, q.units[rb].t1, st.loopOn); Y.rate(st.rate);
   }
   function playChordsSynth(symbols) {
-    clearTimeout(st.cadenceTimer); Y.pause();
+    clearTimeout(st.cadenceTimer); Y.pause(); stopSound();
     const q = st.q; const e = audio(); const s = q.song, beat = 60 / s.bpm; let t = e.ctx.currentTime + 0.05;
     const voiced = T.voiceLead(symbols.map(sym => sym || 'I'), s.key.mode, s.key.tonic);
     voiced.forEach((v, i) => { const d = q.units[i].beats * beat; e.playChord('piano', v.notes, t, d * 0.95); t += d; });
   }
   function playDegreesSynth(labels) {
-    clearTimeout(st.cadenceTimer); Y.pause();
+    clearTimeout(st.cadenceTimer); Y.pause(); stopSound();
     const s = st.q.song; const e = audio(); let t = e.ctx.currentTime + 0.05;
     const base = T.tonicMidi(s.key.tonic) + 12;
     labels.forEach(l => { const d = T.degreeByLabel(s.key.mode, l); if (d) e.playNote('piano', base + d.st, t, 0.42, 0.5); t += 0.45; });
@@ -143,7 +150,7 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
     if (!levelUp && store.songAutoNext) { clearTimeout(st.autoTimer); st.autoTimer = setTimeout(next, all ? 6000 : 12000); }
   }
   function next() {
-    clearTimeout(st.autoTimer); clearTimeout(st.cadenceTimer); Y.pause();
+    clearTimeout(st.autoTimer); clearTimeout(st.cadenceTimer); Y.pause(); stopSound(); st.playToken = (st.playToken || 0) + 1;
     if (R && st.q && st.answered) { R.onNext(); return; }
     session.nextIfDone();
     st.q = newQuestion(); st.answered = false; st.transport = false; st.playing = -1; st.melPlaying = false;

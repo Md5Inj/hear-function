@@ -44,7 +44,7 @@ export default function IntervalsExercise({ mistakes, tonus }) {
     return q;
   }
   function play() {
-    const q = st.q; if (!q) return; st.unlocked = true;
+    const q = st.q; if (!q) return; st.unlocked = true; try { audio().stopAll(); } catch (e) { /* без звука на сервере */ }  // новый звук глушит предыдущий
     const e = audio(); const t = e.ctx.currentTime + 0.1;
     if (q.dir === 'harm') { e.playChord(q.timbre, [q.low, q.high], t, 1.8, 0.75); return; }
     const [a, b] = q.dir === 'up' ? [q.low, q.high] : [q.high, q.low];
