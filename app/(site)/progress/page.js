@@ -21,10 +21,10 @@ export default async function Progress() {
       {EX.map(([ex, name, levels]) => (
         <div key={ex} className="mt-7">
           <h2 className="font-serif font-medium text-[22px] mb-1">{name}</h2>
-          {(levels.minor ? ['major', 'minor'] : ['major']).map(mode => { const p = progress[ex + '.' + mode] || { level: 1, history: [], total: 0 }; const top = Math.max(p.maxLevel || 1, p.level); const pct = Math.round(((top - 1) / levels[mode].length) * 100); return (
+          {(levels.minor ? ['major', 'minor'] : ['major']).map(mode => { const p = progress[ex + '.' + mode] || { level: 1, history: [], total: 0 }; const top = Math.max(p.maxLevel || 1, p.level); const cbl = p.correctByLevel || {}; const pct = Math.round((levels[mode].filter((_, i) => (cbl[i + 1] || 0) >= 100).length / levels[mode].length) * 100); return (
             <div key={mode} className="pt-2 pb-3.5 border-t border-rule">
               <div className="flex justify-between gap-3 flex-wrap text-[15px]"><span>{levels.minor ? (mode === 'major' ? 'Major' : 'Minor') : 'All tasks'}</span><span className="muted">{pct}% done{p.total ? ` · answers ${p.total}, correct ${p.correct}` : ' · not started yet'}{lastAt[ex + '.' + mode] ? ` · last session ${fmt(lastAt[ex + '.' + mode])}` : ''}</span></div>
-              <LevelPath levels={levels[mode]} level={top} maxLevel={top} history={(p.byLevel || {})[top] || p.history || []} W={st.levelUpWindow} NEED={st.levelUpNeed} />
+              <LevelPath levels={levels[mode]} level={top} maxLevel={top} passed={cbl} history={(p.byLevel || {})[top] || p.history || []} W={st.levelUpWindow} NEED={st.levelUpNeed} />
             </div>
           ); })}
         </div>

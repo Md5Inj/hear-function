@@ -38,7 +38,7 @@ export function useExercise(cfg) {
     };
     ctx.recordResult = correct => {
       const p = ctx.prog();
-      p.total++; if (correct) { p.correct++; p.streak++; p.best = Math.max(p.best, p.streak); } else p.streak = 0;
+      p.total++; if (correct) { p.correct++; p.streak++; p.best = Math.max(p.best, p.streak); p.correctByLevel = p.correctByLevel || {}; p.correctByLevel[p.level] = (p.correctByLevel[p.level] || 0) + 1; } else p.streak = 0;
       p.history.push(correct ? 1 : 0); if (p.history.length > W) p.history.shift();
       let levelUp = false;
       // правило выполнено на достигнутом уровне: открываем следующий, но пользователя не переключаем — он выберет сам

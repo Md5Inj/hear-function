@@ -32,7 +32,7 @@ export function SessionStrip({ session, noun, active, right, note, idle }) {
       <div className="text-ink-2 text-[15px] whitespace-nowrap">
         {active ? <>{noun} <b className="text-ink font-medium">{Math.min(results.length + 1, n)}</b> of {n} <span className="inline-block min-w-[22px] ml-2.5 px-[7px] py-px rounded-full font-semibold tabular-nums text-center text-ok bg-ok-bg" data-tip="Correct">{good}</span><span className="inline-block min-w-[22px] ml-1 px-[7px] py-px rounded-full font-semibold tabular-nums text-center text-bad bg-bad-bg" data-tip="Mistakes">{bad}</span>{note ? <span className="text-ink-3"> · {note}</span> : null}</> : null}
       </div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-ink-2 justify-self-end relative">{right}</div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-ink-2 justify-self-end relative order-first sm:order-none">{right}</div>
     </section>
   );
 }
@@ -66,7 +66,7 @@ export function SettingsPopover({ ctx, showTimbre, hidden, mistakes }) {
         <div className="absolute right-0 top-11 z-30 w-[min(360px,calc(100vw-1.5rem))] bg-paper border border-rule rounded-xl shadow-[0_12px_32px_rgba(28,32,51,0.12)] p-4 pt-5 grid gap-4" ref={popRef}>
           <button className={closeCls} type="button" aria-label="Close" onClick={() => setOpen(false)}>×</button>
           <div className="grid gap-2"><span className={labelCls}>Level</span>
-            <LevelPath levels={ctx.levels()} level={p.level} maxLevel={p.maxLevel} history={(p.byLevel || {})[Math.max(p.maxLevel || 1, p.level)] || p.history || []} W={settings.levelUpWindow || 20} NEED={settings.levelUpNeed || 16} onSelect={n => { ctx.setLevel(n); setOpen(false); }} />
+            <LevelPath levels={ctx.levels()} level={p.level} maxLevel={p.maxLevel} passed={p.correctByLevel} history={(p.byLevel || {})[Math.max(p.maxLevel || 1, p.level)] || p.history || []} W={settings.levelUpWindow || 20} NEED={settings.levelUpNeed || 16} onSelect={n => { ctx.setLevel(n); setOpen(false); }} />
           </div>
           {mistakes && (
             <div className="grid gap-2"><span className={labelCls}>Mode</span>

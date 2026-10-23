@@ -7,18 +7,22 @@ import { cn } from '@/lib/utils';
 const Trophy = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 21h8" /><path d="M12 17v4" /><path d="M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M7 6H4a3 3 0 0 0 3 3" /><path d="M17 6h3a3 3 0 0 1-3 3" /></svg>;
 const Note = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M14 3v11.6a3.5 3.5 0 1 0 2 3.2V7l4-1V3l-6 1.5z" /></svg>;
 const ICON = 'inline-flex items-center justify-center rounded-full w-[42px] h-[42px]';
-function Ring({ pct, size = 'w-[42px] h-[42px]', num = 'text-[13px]' }) {
+function Ring({ pct, size = 'w-[42px] h-[42px]', num = 'text-[13px]', label }) {
   const r = 17, c = 2 * Math.PI * r;
   return (
     <span className={cn('relative inline-flex items-center justify-center', size)}>
       <svg viewBox="0 0 42 42" className="absolute inset-0 w-full h-full"><circle cx="21" cy="21" r={r} fill="var(--paper)" stroke="var(--rule)" strokeWidth="3.5" /><circle cx="21" cy="21" r={r} fill="none" stroke="var(--accent)" strokeWidth="3.5" strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)} strokeLinecap="round" transform="rotate(-90 21 21)" /></svg>
-      <b className={cn('relative z-[1] font-semibold text-ink', num)}>{pct}</b>
+      <b className={cn('relative z-[1] font-semibold text-ink', num)}>{label != null ? label : pct}</b>
     </span>
   );
 }
 
-export default function LevelPath({ levels, level, maxLevel, history = [], W = 20, NEED = 16, onSelect, collapsible, compact }) {
+/* Пройден ли уровень: только по своим результатам — PASS верных ответов на этом уровне (passed: { [уровень]: верных }).
+   Достигнутый уровень (top) лишь открывает следующие, «пройденными» их не делает. */
+export default function LevelPath({ levels, level, maxLevel, history = [], W = 20, NEED = 16, passed = {}, PASS = 100, onSelect, collapsible, compact }) {
   const top = Math.max(maxLevel || 1, level);
+  const cnt = n => (passed && passed[n]) || 0, isPassed = n => cnt(n) >= PASS;
+  const countRing = (n, size, num) => <Ring pct={Math.min(100, Math.round(cnt(n) / PASS * 100))} size={size} num={num} label={cnt(n)} />;
   const [open, setOpen] = useState(false);
   const right = history.reduce((a, b) => a + b, 0);
   const pct = Math.min(100, Math.round((Math.min(right, NEED) / NEED) * 100));
@@ -35,11 +39,13 @@ export default function LevelPath({ levels, level, maxLevel, history = [], W = 2
   const subCls = compact ? 'text-xs text-ink-2' : 'text-[13px] text-ink-2';
 
   const row = (l, i, short) => {
-    const n = i + 1, state = n < top ? 'done' : n === top ? 'cur' : 'locked';
+    const n = i + 1, state = isPassed(n) ? 'done' : n === top ? 'cur' : n < top ? 'open' : 'locked';
+    const num = compact ? 'text-[11px]' : 'text-[13px]';
     const icon = state === 'done' ? <span className={cn(ICON, icoSize, 'bg-accent text-white')}><Trophy /></span>
-      : state === 'cur' ? <Ring pct={pct} size={ringSize} num={compact ? 'text-[11px]' : 'text-[13px]'} />
+      : state === 'cur' ? <Ring pct={pct} size={ringSize} num={num} />
+      : state === 'open' ? countRing(n, ringSize, num)
       : <span className={cn(ICON, icoSize, 'bg-rule text-paper')}><Note /></span>;
-    const sub = state === 'done' ? `passed · ${l.desc}` : state === 'cur' ? (n === level ? hint : l.desc) : l.desc;
+    const sub = state === 'done' ? `passed · ${l.desc}` : state === 'cur' ? (n === level ? hint : l.desc) : state === 'open' ? `${cnt(n)} of ${PASS} correct · ${l.desc}` : l.desc;
     const numCls = state === 'locked' ? 'text-ink-3' : 'text-accent';
     const body = (<>
       <span className="grid gap-0.5 min-w-0">
@@ -56,12 +62,13 @@ export default function LevelPath({ levels, level, maxLevel, history = [], W = 2
 
   if (compact) return <div className="grid gap-1 pt-1.5">{row(levels[level - 1], level - 1)}</div>;
   if (collapsible && !open) {
-    const done = level < top;
+    const done = isPassed(level);
+    const closedSub = done ? `passed · ${cnt(level)} correct` : level === top ? hint : `${cnt(level)} of ${PASS} correct`;
     return (
       <div className="grid gap-1 pt-3 pb-1">
         <button className={cn(itemBase, 'bg-tint cursor-pointer hover:bg-accent-soft')} onClick={() => setOpen(true)}>
-          {done ? <span className={cn(ICON, 'bg-accent text-white')}><Trophy /></span> : <Ring pct={pct} />}
-          <span className="grid gap-0.5 min-w-0"><b className="font-medium text-base"><span className="font-medium mr-0.5 text-accent">{level}.</span> {levels[level - 1].title}</b><small className="text-[13px] text-ink-2">level {level} of {levels.length} · {done ? `passed, reached level ${top}` : hint}</small></span>
+          {done ? <span className={cn(ICON, 'bg-accent text-white')}><Trophy /></span> : level === top ? <Ring pct={pct} /> : countRing(level)}
+          <span className="grid gap-0.5 min-w-0"><b className="font-medium text-base"><span className="font-medium mr-0.5 text-accent">{level}.</span> {levels[level - 1].title}</b><small className="text-[13px] text-ink-2">level {level} of {levels.length} · {closedSub}</small></span>
           <span className="text-accent shrink-0" aria-label="all levels"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg></span>
         </button>
       </div>
@@ -71,8 +78,8 @@ export default function LevelPath({ levels, level, maxLevel, history = [], W = 2
   const isOpen = g => opened ? opened.has(g.title) : g.idx.includes(level - 1);
   const toggle = g => { const next = new Set(opened || groups.filter(isOpen).map(x => x.title)); if (next.has(g.title)) next.delete(g.title); else next.add(g.title); setOpened(next); };
   const group = g => {
-    const first = g.idx[0] + 1, lastN = g.idx[g.idx.length - 1] + 1, done = g.idx.filter(i => i + 1 < top).length;
-    const state = lastN < top ? 'done' : first <= top ? 'cur' : 'locked', gopen = isOpen(g);
+    const first = g.idx[0] + 1, lastN = g.idx[g.idx.length - 1] + 1, done = g.idx.filter(i => isPassed(i + 1)).length;
+    const state = done === g.idx.length ? 'done' : first <= top ? 'cur' : 'locked', gopen = isOpen(g);
     const icon = state === 'done' ? <span className={cn(ICON, 'bg-accent text-white')}><Trophy /></span>
       : state === 'cur' ? <span className={cn(ICON, 'bg-accent-soft text-accent text-[13px] font-medium')}>{done}/{g.idx.length}</span>
       : <span className={cn(ICON, 'bg-rule text-paper')}><Note /></span>;

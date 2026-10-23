@@ -310,7 +310,7 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
   return (
     <>
       {!R && <SessionStrip session={session} noun={tx('song')} active={!!q} idle={loaded && !q} note={mistakes ? tx('mistakesNote') : tonus ? tx('tonusNote') : (q && st.repeat && allDone() ? tx('repeatNote') : null)} right={<><MistakesBadge exercise={isMel ? 'melodies' : 'songs'} mode={mode} level={isMel ? null : page.prog().level} href={(isMel ? '/melodies' : '/songs') + '?mode=' + mode + '&mistakes=1'} on={!!mistakes} /><HelpPopover exercise={isMel ? 'melodies' : 'songs'} /><SettingsPopover ctx={page} hidden={isMel && !mistakes} mistakes={{ on: !!mistakes, count: mk.count, tonus: isMel ? null : !!tonus }} /></>} />}
-      {!R && !isMel && !mistakes && !tonus && <LevelPath levels={page.levels()} level={page.prog().level} maxLevel={page.prog().maxLevel} history={(page.prog().byLevel || {})[Math.max(page.prog().maxLevel || 1, page.prog().level)] || page.prog().history} W={settings.levelUpWindow || 20} NEED={settings.levelUpNeed || 16} onSelect={n => page.setLevel(n)} collapsible />}
+      {!R && !isMel && !mistakes && !tonus && <LevelPath levels={page.levels()} level={page.prog().level} maxLevel={page.prog().maxLevel} passed={page.prog().correctByLevel} history={(page.prog().byLevel || {})[Math.max(page.prog().maxLevel || 1, page.prog().level)] || page.prog().history} W={settings.levelUpWindow || 20} NEED={settings.levelUpNeed || 16} onSelect={n => page.setLevel(n)} collapsible />}
       {levelUpOpen && <LevelUpBanner ctx={page} onClose={() => setLevelUpOpen(false)} />}
       {noMistakes && <MistakesEmpty href={(isMel ? '/melodies' : '/songs') + '?mode=' + mode} />}
       <section className={EX.STAGE}>

@@ -89,7 +89,7 @@ export default function IntervalsExercise({ mistakes, tonus }) {
   return (
     <>
       <SessionStrip session={session} noun={tx('question')} active={!!q} idle={noMistakes} note={mistakes ? tx('mistakesNote') : tonus ? tx('tonusNote') : null} right={<><MistakesBadge exercise="intervals" mode={mode} level={page.prog().level} href="/intervals?mistakes=1" on={!!mistakes} /><HelpPopover exercise="intervals" /><SettingsPopover ctx={page} showTimbre mistakes={{ on: !!mistakes, count: mk.count, tonus: !!tonus }} /></>} />
-      {!mistakes && !tonus && <LevelPath levels={page.levels()} level={page.prog().level} maxLevel={page.prog().maxLevel} history={(page.prog().byLevel || {})[Math.max(page.prog().maxLevel || 1, page.prog().level)] || page.prog().history} W={settings.levelUpWindow || 20} NEED={settings.levelUpNeed || 16} onSelect={n => page.setLevel(n)} collapsible />}
+      {!mistakes && !tonus && <LevelPath levels={page.levels()} level={page.prog().level} maxLevel={page.prog().maxLevel} passed={page.prog().correctByLevel} history={(page.prog().byLevel || {})[Math.max(page.prog().maxLevel || 1, page.prog().level)] || page.prog().history} W={settings.levelUpWindow || 20} NEED={settings.levelUpNeed || 16} onSelect={n => page.setLevel(n)} collapsible />}
       {levelUpOpen && <LevelUpBanner ctx={page} onClose={() => setLevelUpOpen(false)} />}
       {noMistakes && <MistakesEmpty href="/intervals" />}
       <section className={EX.STAGE} hidden={noMistakes}>

@@ -115,7 +115,7 @@ export default function ProgressionsExercise({ mode, mistakes, tonus }) {
   return (
     <>
       <SessionStrip session={session} noun={tx('question')} active={!!q} idle={mistakes && mk.loaded && !q} note={mistakes ? tx('mistakesNote') : tonus ? tx('tonusNote') : null} right={<><MistakesBadge exercise="progressions" mode={mode} level={page.prog().level} href={'/progressions?mode=' + mode + '&mistakes=1'} on={!!mistakes} /><HelpPopover exercise="progressions" /><SettingsPopover ctx={page} showTimbre mistakes={{ on: !!mistakes, count: mk.count, tonus: !!tonus }} /></>} />
-      {!mistakes && !tonus && <LevelPath levels={page.levels()} level={page.prog().level} maxLevel={page.prog().maxLevel} history={(page.prog().byLevel || {})[Math.max(page.prog().maxLevel || 1, page.prog().level)] || page.prog().history} W={settings.levelUpWindow || 20} NEED={settings.levelUpNeed || 16} onSelect={n => page.setLevel(n)} collapsible />}
+      {!mistakes && !tonus && <LevelPath levels={page.levels()} level={page.prog().level} maxLevel={page.prog().maxLevel} passed={page.prog().correctByLevel} history={(page.prog().byLevel || {})[Math.max(page.prog().maxLevel || 1, page.prog().level)] || page.prog().history} W={settings.levelUpWindow || 20} NEED={settings.levelUpNeed || 16} onSelect={n => page.setLevel(n)} collapsible />}
       {levelUpOpen && <LevelUpBanner ctx={page} onClose={() => setLevelUpOpen(false)} />}
       {mistakes && mk.loaded && !q && <MistakesEmpty href={'/progressions?mode=' + mode} />}
       <section className={EX.STAGE} hidden={mistakes && mk.loaded && !q}>
