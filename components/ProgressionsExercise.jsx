@@ -15,12 +15,14 @@ import { Button } from './ui/button';
 import * as EX from './ui/ex';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
+import { useLocale } from 'next-intl';
+import { tr } from '@/lib/i18n-data';
 
 const isChrom = (sym, mode) => /\//.test(sym) || /^♭/.test(sym) || sym === 'N' || (mode === 'minor' && sym === 'I') || (mode === 'major' && sym === 'iv') || sym === 'vii°7';
 
 export default function ProgressionsExercise({ mode, mistakes, tonus }) {
   const { store, audio, logAnswer, weightedPick, settings } = useApp();
-  const tx = useTranslations('Ex');
+  const tx = useTranslations('Ex'); const locale = useLocale();
   const [, rerender] = useReducer(x => x + 1, 0);
   const [levelUpOpen, setLevelUpOpen] = useState(false);
   const st = useRef({ q: null, answered: false, slots: [], sel: 0, lastEntry: null, autoTimer: null, unlocked: false, pendingAcc: null }).current;
@@ -107,7 +109,7 @@ export default function ProgressionsExercise({ mode, mistakes, tonus }) {
   const all = answered && q.chords.every((tok, i) => T.parseToken(tok).symbol === slots[i]);
   const nRight = answered ? q.chords.filter((tok, i) => T.parseToken(tok).symbol === slots[i]).length : 0;
   const score = answered ? { n: nRight, total: q.chords.length, pct: Math.round(nRight / q.chords.length * 100) } : null;
-  const where = q ? [q.entry.name].concat(q.entry.examples).filter(Boolean).join('; ') : '';
+  const where = q ? [q.entry.name].concat(q.entry.examples).filter(Boolean).map(x => tr(x, locale)).join('; ') : '';
   return (
     <>
       <SessionStrip session={session} noun={tx('question')} active={!!q} idle={mistakes && mk.loaded && !q} note={mistakes ? tx('mistakesNote') : tonus ? tx('tonusNote') : null} right={<><MistakesBadge exercise="progressions" mode={mode} level={page.prog().level} href={'/progressions?mode=' + mode + '&mistakes=1'} on={!!mistakes} /><HelpPopover exercise="progressions" /><SettingsPopover ctx={page} showTimbre mistakes={{ on: !!mistakes, count: mk.count, tonus: !!tonus }} /></>} />
@@ -134,7 +136,7 @@ export default function ProgressionsExercise({ mode, mistakes, tonus }) {
           {answered && <Button variant="primary" size="primary" onClick={() => next()}>{tx('next')}</Button>}
         </div>
         <div className={EX.feedbackCls(answered, all)}>
-          {answered && <><div className="text-lg"><b className="font-semibold">{all ? tx('yes') : tx('notQuite')}</b> <span className="text-ink-2">{tx('score', score)}</span></div><div className="text-ink-2 text-[15px] mt-1">{T.keyName(q.mode, q.tonicPc)}: {q.chords.map(c => T.letterName(q.mode, c, q.tonicPc)).join(' – ')}.</div>{where && <div className="text-ink-2 text-[15px] mt-1">{where}.</div>}</>}
+          {answered && <><div className="text-lg"><b className="font-semibold">{all ? tx('yes') : tx('notQuite')}</b> <span className="text-ink-2">{tx('score', score)}</span></div><div className="text-ink-2 text-[15px] mt-1">{tr(T.keyName(q.mode, q.tonicPc), locale)}: {q.chords.map(c => T.letterName(q.mode, c, q.tonicPc)).join(' – ')}.</div>{where && <div className="text-ink-2 text-[15px] mt-1">{where}.</div>}</>}
         </div>
       </section>
     </>

@@ -15,10 +15,12 @@ import { useTranslations } from 'next-intl';
 import { Button } from './ui/button';
 import * as EX from './ui/ex';
 import { cn } from '@/lib/utils';
+import { useLocale } from 'next-intl';
+import { tr } from '@/lib/i18n-data';
 
 export default function DegreesExercise({ mode, mistakes, tonus }) {
   const { store, audio, logAnswer, weightedPick, pick, settings } = useApp();
-  const tx = useTranslations('Ex');
+  const tx = useTranslations('Ex'); const locale = useLocale();
   const [, rerender] = useReducer(x => x + 1, 0);
   const [levelUpOpen, setLevelUpOpen] = useState(false);
   const st = useRef({ q: null, answered: false, chosen: null, block: null, lastDegree: null, autoTimer: null, deadline: null, unlocked: false, pendingAcc: null }).current;
@@ -137,7 +139,7 @@ export default function DegreesExercise({ mode, mistakes, tonus }) {
         </div>
         {answered && <div className={EX.ACTIONS + ' mt-[22px]'} id="nextActions"><Button variant="primary" size="primary" onClick={() => next()}>{tx('next')}</Button></div>}
         <div className={EX.feedbackCls(answered, correct)}>
-          {answered && <div className="text-lg"><b className="font-semibold">{correct ? tx('yes') : st.chosen === null ? tx('tooSlow') : tx('no')}</b> <span className={EX.ROMAN}>{q.degree.label}</span>, {T.NOTE_NAMES[q.midi % 12]} in {T.keyName(q.mode, q.tonicPc)}. <button className={EX.LINK} onClick={playResolution}>{tx('resolution')}</button></div>}
+          {answered && <div className="text-lg"><b className="font-semibold">{correct ? tx('yes') : st.chosen === null ? tx('tooSlow') : tx('no')}</b> <span className={EX.ROMAN}>{q.degree.label}</span>, {T.NOTE_NAMES[q.midi % 12]} {tx('inKey')} {tr(T.keyName(q.mode, q.tonicPc), locale)}. <button className={EX.LINK} onClick={playResolution}>{tx('resolution')}</button></div>}
         </div>
       </section>
     </>

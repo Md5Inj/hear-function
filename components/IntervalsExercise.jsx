@@ -15,11 +15,14 @@ import { useTranslations } from 'next-intl';
 import { Button } from './ui/button';
 import * as EX from './ui/ex';
 import { cn } from '@/lib/utils';
+import { useLocale } from 'next-intl';
+import { tr } from '@/lib/i18n-data';
 
 export default function IntervalsExercise({ mistakes, tonus }) {
   const mode = 'major';  // интервалы не зависят от лада; прогресс хранится под intervals.major
   const { store, audio, logAnswer, weightedPick, pick, settings } = useApp();
-  const tx = useTranslations('Ex');
+  const tx = useTranslations('Ex'); const locale = useLocale();
+  const ivDisp = i => locale === 'ru' ? i.label : i.disp;  // в русской локали — русские обозначения (м3, б3, ч5)
   const [, rerender] = useReducer(x => x + 1, 0);
   const [levelUpOpen, setLevelUpOpen] = useState(false);
   const st = useRef({ q: null, answered: false, chosen: null, last: null, autoTimer: null, unlocked: false, pendingAcc: null }).current;
@@ -76,7 +79,7 @@ export default function IntervalsExercise({ mistakes, tonus }) {
       else if (/^[2-8]$/.test(ev.key) && q && !st.answered) {
         ev.preventDefault(); const n = +ev.key; const acc = st.pendingAcc; st.pendingAcc = null;
         const want = IV.INTERVALS.find(i => i.num === n && (acc === 'A' ? i.q === 'A' : acc === 'm' ? i.q === 'm' : (i.q === 'M' || i.q === 'P')));
-        if (want && q.level.semis.includes(want.semis)) answer(want.label); else if (want) toast(tx('intervalNotOnLevel', { x: want.disp }));
+        if (want && q.level.semis.includes(want.semis)) answer(want.label); else if (want) toast(tx('intervalNotOnLevel', { x: ivDisp(want) }));
       }
     };
     document.addEventListener('keydown', onKey); return () => document.removeEventListener('keydown', onKey);
@@ -97,12 +100,12 @@ export default function IntervalsExercise({ mistakes, tonus }) {
         <div className={EX.PARTLINE}>{q ? (q.dir === 'harm' ? tx('intervalHarm') : q.dir === 'up' ? tx('intervalUp') : tx('intervalDown')) : ''}</div>
         <div className={EX.KEYS}>
           {choices.map(i => (
-            <button key={i.label} className={cn(EX.KEY, answered && i.label === q.iv.label && EX.KEY_OK, answered && i.label === st.chosen && i.label !== q.iv.label && EX.KEY_BAD)} disabled={answered} data-tip={i.name} onClick={() => answer(i.label)}>{i.disp}</button>
+            <button key={i.label} className={cn(EX.KEY, answered && i.label === q.iv.label && EX.KEY_OK, answered && i.label === st.chosen && i.label !== q.iv.label && EX.KEY_BAD)} disabled={answered} data-tip={tr(i.name, locale)} onClick={() => answer(i.label)}>{ivDisp(i)}</button>
           ))}
         </div>
         {answered && <div className={EX.ACTIONS + ' mt-[22px]'} id="nextActions"><Button variant="primary" size="primary" onClick={() => next()}>{tx('next')}</Button></div>}
         <div className={EX.feedbackCls(answered, correct)}>
-          {answered && <div className="text-lg"><b className="font-semibold">{correct ? tx('yes') : tx('no')}</b> {q.iv.name}: {T.NOTE_NAMES[q.low % 12]}–{T.NOTE_NAMES[q.high % 12]}. <button className={EX.LINK} onClick={play}>{tx('again')}</button></div>}
+          {answered && <div className="text-lg"><b className="font-semibold">{correct ? tx('yes') : tx('no')}</b> {tr(q.iv.name, locale)}: {T.NOTE_NAMES[q.low % 12]}–{T.NOTE_NAMES[q.high % 12]}. <button className={EX.LINK} onClick={play}>{tx('again')}</button></div>}
         </div>
       </section>
     </>

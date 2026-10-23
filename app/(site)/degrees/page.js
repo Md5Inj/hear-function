@@ -1,6 +1,7 @@
+import { getTranslations } from 'next-intl/server';
 import { requireUser, resolveMode } from '@/lib/page-mode';
 import DegreesExercise from '@/components/DegreesExercise';
-export const metadata = { title: 'Degrees — Hear Function' };
+export async function generateMetadata() { const t = await getTranslations('Titles'); return { title: t('degrees') + ' — Hear Function' }; }
 export default async function Page({ searchParams }) {
   const user = await requireUser('/degrees');
   const mode = await resolveMode(user, searchParams);

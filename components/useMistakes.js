@@ -2,6 +2,7 @@
 /* Работа над ошибками: список того, что отвечено неверно и ещё не исправлено; после верного ответа элемент выбывает. */
 import { useEffect, useState, useCallback } from 'react';
 import { useApp } from './AppProvider';
+import { useTranslations } from 'next-intl';
 
 export function useMistakes(exercise, mode, on) {
   const { api } = useApp();
@@ -11,7 +12,8 @@ export function useMistakes(exercise, mode, on) {
   return { on: !!on, items, loaded: items != null, remove, count: items ? items.length : null };
 }
 export function MistakesEmpty({ href }) {
-  return <div className="text-ink-2 text-[15px]"><div className="text-center py-14"><div className="font-serif text-2xl">No mistakes left.</div><div className="text-ink-2 mt-2">You have already fixed everything you answered incorrectly. <a className="text-accent hover:underline" href={href}>Back to normal mode</a>.</div></div></div>;
+  const ts = useTranslations('Session');
+  return <div className="text-ink-2 text-[15px]"><div className="text-center py-14"><div className="font-serif text-2xl">{ts('noMistakesTitle')}</div><div className="text-ink-2 mt-2">{ts('noMistakesText')} <a className="text-accent hover:underline" href={href}>{ts('backNormal')}</a>.</div></div></div>;
 }
 
 export function useMistakeCount(exercise, mode, level) {
@@ -21,7 +23,7 @@ export function useMistakeCount(exercise, mode, level) {
   return items.filter(i => level == null || i.level === level).length;
 }
 export function MistakesBadge({ exercise, mode, level, href, on }) {
-  const n = useMistakeCount(exercise, mode, level);
+  const n = useMistakeCount(exercise, mode, level); const ts = useTranslations('Session');
   if (!n) return null;
-  return <a className="inline-flex items-center gap-1.5 bg-bad border border-bad text-white rounded-full px-3.5 py-[7px] text-sm hover:no-underline" href={href} data-tip={on ? "You're in Mistakes mode" : 'Open Mistakes for this level'}>Mistakes <b>{n}</b></a>;
+  return <a className="inline-flex items-center gap-1.5 bg-bad border border-bad text-white rounded-full px-3.5 py-[7px] text-sm hover:no-underline" href={href} data-tip={on ? ts('badgeOn') : ts('badgeOff')}>{ts('badge')} <b>{n}</b></a>;
 }

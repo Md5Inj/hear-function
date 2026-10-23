@@ -3,6 +3,7 @@
    закрытые — серый кружок с нотой. На страницах упражнений список сворачивается до текущей строки. Вёрстка на Tailwind. */
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
 const Trophy = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 21h8" /><path d="M12 17v4" /><path d="M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M7 6H4a3 3 0 0 0 3 3" /><path d="M17 6h3a3 3 0 0 1-3 3" /></svg>;
 const Note = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M14 3v11.6a3.5 3.5 0 1 0 2 3.2V7l4-1V3l-6 1.5z" /></svg>;
@@ -20,6 +21,7 @@ function Ring({ pct, size = 'w-[42px] h-[42px]', num = 'text-[13px]', label }) {
 /* Пройден ли уровень: только по своим результатам — PASS верных ответов на этом уровне (passed: { [уровень]: верных }).
    Достигнутый уровень (top) лишь открывает следующие, «пройденными» их не делает. */
 export default function LevelPath({ levels, level, maxLevel, history = [], W = 20, NEED = 16, passed = {}, PASS = 100, onSelect, collapsible, compact }) {
+  const t = useTranslations('Level');
   const top = Math.max(maxLevel || 1, level);
   const cnt = n => (passed && passed[n]) || 0, isPassed = n => cnt(n) >= PASS;
   const countRing = (n, size, num) => <Ring pct={Math.min(100, Math.round(cnt(n) / PASS * 100))} size={size} num={num} label={cnt(n)} />;
@@ -28,7 +30,7 @@ export default function LevelPath({ levels, level, maxLevel, history = [], W = 2
   const pct = Math.min(100, Math.round((Math.min(right, NEED) / NEED) * 100));
   const leftN = Math.max(0, NEED - right), need = Math.max(0, W - history.length);
   const last = top >= levels.length;
-  const hint = last ? 'last level' : `to next: ${leftN} correct${need > 0 ? ` and ${need} more answers` : ''} of ${W}`;
+  const hint = last ? t('lastLevel') : need > 0 ? t('toNextMore', { left: leftN, need, w: W }) : t('toNext', { left: leftN, w: W });
   const [opened, setOpened] = useState(null);
 
   const itemBase = cn('grid gap-3.5 items-start text-left bg-transparent border-0 rounded-xl text-ink',
@@ -45,14 +47,14 @@ export default function LevelPath({ levels, level, maxLevel, history = [], W = 2
       : state === 'cur' ? <Ring pct={pct} size={ringSize} num={num} />
       : state === 'open' ? countRing(n, ringSize, num)
       : <span className={cn(ICON, icoSize, 'bg-rule text-paper')}><Note /></span>;
-    const sub = state === 'done' ? `passed · ${l.desc}` : state === 'cur' ? (n === level ? hint : l.desc) : state === 'open' ? `${cnt(n)} of ${PASS} correct · ${l.desc}` : l.desc;
+    const sub = state === 'done' ? t('passedDesc', { desc: l.desc }) : state === 'cur' ? (n === level ? hint : l.desc) : state === 'open' ? t('countDesc', { n: cnt(n), pass: PASS, desc: l.desc }) : l.desc;
     const numCls = state === 'locked' ? 'text-ink-3' : 'text-accent';
     const body = (<>
       <span className="grid gap-0.5 min-w-0">
         <b className={cn('font-medium', titleCls, state === 'locked' && 'font-normal')}><span className={cn('font-medium mr-0.5', numCls)}>{n}.</span> {short && l.short ? l.short : l.title}</b>
         <small className={subCls}>{sub}</small>
       </span>
-      {n === level && <span className="text-xs text-accent whitespace-nowrap">now</span>}
+      {n === level && <span className="text-xs text-accent whitespace-nowrap">{t('now')}</span>}
     </>);
     const cls = cn(itemBase, state === 'locked' && 'text-ink-3', n === level && 'bg-accent-soft');
     return onSelect
@@ -63,13 +65,13 @@ export default function LevelPath({ levels, level, maxLevel, history = [], W = 2
   if (compact) return <div className="grid gap-1 pt-1.5">{row(levels[level - 1], level - 1)}</div>;
   if (collapsible && !open) {
     const done = isPassed(level);
-    const closedSub = done ? `passed · ${cnt(level)} correct` : level === top ? hint : `${cnt(level)} of ${PASS} correct`;
+    const closedSub = done ? t('passedCount', { n: cnt(level) }) : level === top ? hint : t('count', { n: cnt(level), pass: PASS });
     return (
       <div className="grid gap-1 pt-3 pb-1">
         <button className={cn(itemBase, 'bg-tint cursor-pointer hover:bg-accent-soft')} onClick={() => setOpen(true)}>
           {done ? <span className={cn(ICON, 'bg-accent text-white')}><Trophy /></span> : level === top ? <Ring pct={pct} /> : countRing(level)}
-          <span className="grid gap-0.5 min-w-0"><b className="font-medium text-base"><span className="font-medium mr-0.5 text-accent">{level}.</span> {levels[level - 1].title}</b><small className="text-[13px] text-ink-2">level {level} of {levels.length} · {closedSub}</small></span>
-          <span className="text-accent shrink-0" aria-label="all levels"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg></span>
+          <span className="grid gap-0.5 min-w-0"><b className="font-medium text-base"><span className="font-medium mr-0.5 text-accent">{level}.</span> {levels[level - 1].title}</b><small className="text-[13px] text-ink-2">{t('levelOf', { level, total: levels.length, sub: closedSub })}</small></span>
+          <span className="text-accent shrink-0" aria-label={t('allLevels')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg></span>
         </button>
       </div>
     );
@@ -83,7 +85,7 @@ export default function LevelPath({ levels, level, maxLevel, history = [], W = 2
     const icon = state === 'done' ? <span className={cn(ICON, 'bg-accent text-white')}><Trophy /></span>
       : state === 'cur' ? <span className={cn(ICON, 'bg-accent-soft text-accent text-[13px] font-medium')}>{done}/{g.idx.length}</span>
       : <span className={cn(ICON, 'bg-rule text-paper')}><Note /></span>;
-    const sub = state === 'done' ? `levels ${first}–${lastN} · passed` : state === 'cur' ? `levels ${first}–${lastN} · ${done} of ${g.idx.length} passed` : `levels ${first}–${lastN}`;
+    const sub = state === 'done' ? t('groupPassed', { a: first, b: lastN }) : state === 'cur' ? t('groupProgress', { a: first, b: lastN, done, total: g.idx.length }) : t('groupRange', { a: first, b: lastN });
     return (
       <div key={g.title} className="grid gap-0.5">
         <button type="button" className={cn(itemBase, 'w-full cursor-pointer hover:bg-tint', gopen && 'bg-tint')} aria-expanded={gopen} onClick={() => toggle(g)}>
@@ -96,7 +98,7 @@ export default function LevelPath({ levels, level, maxLevel, history = [], W = 2
   return (
     <div className="grid gap-1 pt-3 pb-1">
       {groups ? groups.map(group) : levels.map((l, i) => row(l, i))}
-      {collapsible && <button className="justify-self-start text-[13px] text-accent px-2.5 py-1 hover:underline cursor-pointer bg-transparent border-0" onClick={() => setOpen(false)}>collapse ▴</button>}
+      {collapsible && <button className="justify-self-start text-[13px] text-accent px-2.5 py-1 hover:underline cursor-pointer bg-transparent border-0" onClick={() => setOpen(false)}>{t('collapse')}</button>}
     </div>
   );
 }

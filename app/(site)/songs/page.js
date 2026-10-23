@@ -1,6 +1,7 @@
+import { getTranslations } from 'next-intl/server';
 import { requireUser, resolveMode } from '@/lib/page-mode';
 import SongsExercise from '@/components/SongsExercise';
-export const metadata = { title: 'Song chords — Hear Function' };
+export async function generateMetadata() { const t = await getTranslations('Titles'); return { title: t('songs') + ' — Hear Function' }; }
 export default async function Page({ searchParams }) {
   const user = await requireUser('/songs');
   const sp = (await searchParams) || {};

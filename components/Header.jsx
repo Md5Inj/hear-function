@@ -97,7 +97,7 @@ export default function Header() {
       {/* узкие экраны: бургер */}
       <div className="lg:hidden flex items-center gap-2">
         <LangSwitch />
-        <button className="inline-flex items-center justify-center w-10 h-10 rounded-full border border-rule bg-paper text-ink-2 hover:text-ink hover:border-ink" aria-label="Menu" aria-expanded={open} onClick={() => setOpen(o => !o)}>
+        <button className="inline-flex items-center justify-center w-10 h-10 rounded-full border border-rule bg-paper text-ink-2 hover:text-ink hover:border-ink" aria-label={t('menu')} aria-expanded={open} onClick={() => setOpen(o => !o)}>
           {open
             ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
             : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 6h18M3 12h18M3 18h18" /></svg>}
@@ -110,7 +110,7 @@ export default function Header() {
             <Link className="hover:no-underline" href="/" aria-label="Hear Function" onClick={close}><Logo /></Link>
             <div className="flex items-center gap-2">
               <LangSwitch />
-              <button className="inline-flex items-center justify-center w-10 h-10 rounded-full border border-rule bg-paper text-ink-2 hover:text-ink hover:border-ink" aria-label="Close menu" onClick={close}>
+              <button className="inline-flex items-center justify-center w-10 h-10 rounded-full border border-rule bg-paper text-ink-2 hover:text-ink hover:border-ink" aria-label={t('closeMenu')} onClick={close}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
               </button>
             </div>

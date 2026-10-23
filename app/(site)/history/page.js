@@ -1,7 +1,8 @@
 import { requireUser } from '@/lib/page-mode';
 import { getStore } from '@/lib/db';
 import HistoryPage from '@/components/HistoryPage';
-export const metadata = { title: 'History — Hear Function' };
+import { getTranslations } from 'next-intl/server';
+export async function generateMetadata() { const t = await getTranslations('History'); return { title: t('metaTitle') }; }
 export default async function Page() {
   const user = await requireUser('/history');
   const seen = await getStore().find('seen', { userId: user.id });

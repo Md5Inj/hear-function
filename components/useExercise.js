@@ -3,12 +3,15 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useApp } from './AppProvider';
 import { toast } from './ui';
+import { useLocale, useTranslations } from 'next-intl';
+import { locLevels } from '@/lib/i18n-data';
 
 export function useExercise(cfg) {
   const app = useExerciseApp();
   const { store, save, refresh, pick, settings } = app;
   const W = settings.levelUpWindow || 20, NEED = settings.levelUpNeed || 16;
   const mode = cfg.mode;
+  const locale = useLocale(); const tl = useTranslations('Level');
   // лад с сервера (адрес или сохранённый): сохраняем, если отличается от сохранённого
   useEffect(() => { if (store.mode !== mode) { store.mode = mode; save(); } }, [mode, store, save]);
   const onReset = useRef(cfg.onReset); onReset.current = cfg.onReset;
@@ -26,7 +29,7 @@ export function useExercise(cfg) {
       p.history = p.byLevel[p.level];
       return p;
     };
-    ctx.levels = () => cfg.levels(mode);
+    ctx.levels = () => locLevels(cfg.levels(mode), locale);
     ctx.levelDef = () => ctx.levels()[ctx.prog().level - 1];
     ctx.timbre = lvl => store.timbre === 'auto' ? pick(lvl.timbres) : store.timbre;
     ctx.errRate = label => { const c = ctx.prog().confusion[label]; return !c || c.n < 2 ? 0 : c.wrong / c.n; };
@@ -44,7 +47,7 @@ export function useExercise(cfg) {
       // правило выполнено на достигнутом уровне: открываем следующий, но пользователя не переключаем — он выберет сам
       if (p.level >= (p.maxLevel || 1) && p.level < ctx.levels().length && p.history.length >= W && p.history.reduce((a, b) => a + b, 0) >= NEED) { p.maxLevel = p.level + 1; p.byLevel[p.maxLevel] = p.byLevel[p.maxLevel] || []; levelUp = true; }
       save(); refresh();
-      if (levelUp) toast('Level ' + p.maxLevel + ' unlocked: ' + ctx.levels()[p.maxLevel - 1].title);
+      if (levelUp) toast(tl('unlockedToast', { n: p.maxLevel, title: ctx.levels()[p.maxLevel - 1].title }));
       return levelUp;
     };
     ctx.setLevel = n => { const p = ctx.prog(); p.level = n; p.byLevel[n] = p.byLevel[n] || []; p.history = p.byLevel[n]; save(); refresh(); if (onReset.current) onReset.current(); };
@@ -53,6 +56,6 @@ export function useExercise(cfg) {
     ctx.setSongAutoNext = v => { store.songAutoNext = v; save(); refresh(); };
     ctx.reset = async () => { delete store.progress[cfg.exercise + '.' + mode]; await app.api('DELETE', '/progress?key=' + encodeURIComponent(cfg.exercise + '.' + mode)).catch(() => {}); refresh(); if (onReset.current) onReset.current(); };
     return ctx;
-  }, [cfg.exercise, mode, store, save, refresh, pick, app, W, NEED]);
+  }, [cfg.exercise, mode, locale, tl, store, save, refresh, pick, app, W, NEED]);
 }
 function useExerciseApp() { const app = useApp(); if (!app) throw new Error('useExercise outside AppProvider'); return app; }

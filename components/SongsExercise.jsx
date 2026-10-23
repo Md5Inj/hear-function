@@ -18,6 +18,8 @@ import { toast } from './ui';
 import { Button } from './ui/button';
 import * as EX from './ui/ex';
 import { useTranslations } from 'next-intl';
+import { useLocale } from 'next-intl';
+import { tr } from '@/lib/i18n-data';
 
 const fmt = t => Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
 const isChrom = (sym, mode) => /\//.test(sym) || /^♭/.test(sym) || sym === 'N' || (mode === 'minor' && sym === 'I') || (mode === 'major' && sym === 'iv') || sym === 'vii°7';
@@ -30,7 +32,7 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
   const TASK = task; const isMel = TASK === 'melody';
   const R = review || null;  // режим проверки в админке: заданная песня, полный словарь, без прогресса и истории
   const app = useApp(); const { store, audio, logAnswer, weightedPick, loadSongs, settings } = app;
-  const tx = useTranslations('Ex');
+  const tx = useTranslations('Ex'); const locale = useLocale();
   const router = useRouter();
   const [, rerender] = useReducer(x => x + 1, 0);
   const [levelUpOpen, setLevelUpOpen] = useState(false);
@@ -170,7 +172,7 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
       const q = st.q; if (!q) return;
       st.unavailable.add(q.song.id);
       const byIp = /^\d+\.\d+\.\d+\.\d+$/.test(window.location.hostname);
-      toast(byIp ? tx('ipToast') : `Video failed to load (${Y.ERRORS[code] || 'error ' + code}), picking another song`);
+      toast(byIp ? tx('ipToast') : tx('videoFailed', { err: tr(Y.ERRORS[code], locale) || String(code) }));
       // песня пропускается только в этой сессии: ошибка ролика бывает временной и зависит от браузера, в базу ничего не пишем
       clearTimeout(st.autoTimer); st.autoTimer = setTimeout(() => fns.current.next(), 800);
     });
@@ -358,7 +360,7 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
           {answered && (
             <>
               <div className="text-lg"><b className="font-semibold">{all ? tx('yes') : tx('notQuite')}</b> <span className="text-ink-2">{tx('score', score)}</span></div>
-              <div className="text-ink-2 text-[15px] mt-1">{T.keyName(s.key.mode, s.key.tonic)}{q.chords ? ': ' + s.chords.map(c => T.letterName(s.key.mode, c.c, s.key.tonic)).join(' – ') : ''}.</div>
+              <div className="text-ink-2 text-[15px] mt-1">{tr(T.keyName(s.key.mode, s.key.tonic), locale)}{q.chords ? ': ' + s.chords.map(c => T.letterName(s.key.mode, c.c, s.key.tonic)).join(' – ') : ''}.</div>
               {q.melody && <div className="text-ink-2 text-[15px] mt-1">{tx('melodyNotes', { notes: s.melody.degrees.map(d => T.NOTE_NAMES[(s.key.tonic + T.degreeByLabel(s.key.mode, d).st) % 12]).join(' ') })}</div>}
               <div className="text-ink-2 text-[15px] mt-0.5">{tx('onPiano')} <button className={EX.LINK} onClick={() => q.chords ? playChordsSynth(st.chordSlots) : playDegreesSynth(st.melSlots)}>{tx('yourVar')}</button> · <button className={EX.LINK} onClick={() => q.chords ? playChordsSynth(q.units.map(u => u.sym)) : playDegreesSynth(s.melody.degrees)}>{tx('correctVar')}</button></div>
             </>
@@ -370,7 +372,7 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
           <div className="player dock-player" ref={playerHost} />
           <div className="dock-info">
             <div className="song-title"><span>{s ? s.title : ''}</span> <span className="info up" tabIndex={0}>?<span className="tip">{s ? (isMel && s.melody ? tx('phraseInfo', { start: fmt(s.melody.start), end: fmt(s.melody.end), n: s.melody.degrees.length }) : tx('fragmentInfo', { start: fmt(s.start), end: fmt(s.end), n: q.units.filter(u => u.barStart).length })) : ''}</span></span></div>
-            <div className="song-meta">{s ? s.artist + (s.section ? ', ' + sectionEn(s.section).replace(/^(\S)/, m => m.toLowerCase()) : '') : ''}</div>
+            <div className="song-meta">{s ? s.artist + (s.section ? ', ' + (locale === 'ru' ? tr(s.section, locale) : sectionEn(s.section)).replace(/^(\S)/, m => m.toLowerCase()) : '') : ''}</div>
           </div>
           <div className="dock-controls">
             <Button variant="primary" size="primary" onClick={() => playFragment()}>{tx('listenBtn')}</Button>

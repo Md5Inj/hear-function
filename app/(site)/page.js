@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, getLocale } from 'next-intl/server';
+import { tr } from '@/lib/i18n-data';
 import Songs from '@/lib/songs-db';
 import P from '@/lib/progressions';
 import IV from '@/lib/intervals';
@@ -18,6 +19,7 @@ function status(progress, exercise, levels, st) {
 }
 export default async function Home() {
   const t = await getTranslations('Home');
+  const locale = await getLocale();
   const nav = await getTranslations('Nav');
   const store = getStore();
   const chords = (await chordSongs(store)).filter(s => Songs.levelFor(s)), melodies = await melodySongs(store);
@@ -63,7 +65,7 @@ export default async function Home() {
                   <svg className="tile-ring" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r={r} fill="none" stroke="var(--rule)" strokeWidth="3" /><circle cx="16" cy="16" r={r} fill="none" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)} transform="rotate(-90 16 16)" /></svg>
                   <div className="tile-progress-text">
                     <div><b>{pct}%</b>{href !== '/intervals' && <span className="tile-mode">{x.mode === 'major' ? t('statusMajor') : t('statusMinor')}</span>}</div>
-                    <small>{x.levels[x.level - 1].title}</small>
+                    <small>{tr(x.levels[x.level - 1].title, locale)}</small>
                   </div>
                 </div>
               );
