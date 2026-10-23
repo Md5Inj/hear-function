@@ -1,5 +1,5 @@
 import './style.css';
-import { Fraunces, Public_Sans, Instrument_Serif } from 'next/font/google';
+import { Fraunces, Public_Sans } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale } from 'next-intl/server';
@@ -8,9 +8,8 @@ import { appSettings } from '@/lib/api';
 import AppProvider from '@/components/AppProvider';
 
 /* Шрифты через next/font: файлы хостятся вместе с сайтом (удалённый @import в CSS сборка выбрасывала) */
-const fraunces = Fraunces({ subsets: ['latin'], style: ['normal', 'italic'], axes: ['opsz'], variable: '--font-fraunces', display: 'swap' });
+const fraunces = Fraunces({ subsets: ['latin'], style: ['normal', 'italic'], axes: ['opsz', 'SOFT'], variable: '--font-fraunces', display: 'swap' });
 const publicSans = Public_Sans({ subsets: ['latin'], variable: '--font-public-sans', display: 'swap' });
-const instrument = Instrument_Serif({ subsets: ['latin'], weight: '400', style: ['normal', 'italic'], variable: '--font-instrument', display: 'swap' });
 
 export const metadata = { title: 'Hear Function', description: 'Relative pitch on real music' };
 export const dynamic = 'force-dynamic';
@@ -23,7 +22,7 @@ export default async function RootLayout({ children }) {
   const state = user ? await currentState() : null;
   const settings = await appSettings();
   return (
-    <html lang={locale} className={`${fraunces.variable} ${publicSans.variable} ${instrument.variable}`}>
+    <html lang={locale} className={`${fraunces.variable} ${publicSans.variable}`}>
       <body>
         <NextIntlClientProvider locale={locale}>
           <AppProvider user={user} state={state} settings={settings}>{children}</AppProvider>

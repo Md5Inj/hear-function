@@ -20,7 +20,7 @@
   --color-bad: #c6412e;
   --color-bad-bg: #fbe8e4;
   --font-serif: var(--font-fraunces), 'Iowan Old Style', Georgia, serif;
-  --font-logo: var(--font-instrument), Georgia, serif;
+  --font-logo: var(--font-fraunces), Georgia, serif;
   --font-sans: var(--font-public-sans), -apple-system, 'Segoe UI', Roboto, sans-serif;
   --radius-DEFAULT: 8px;
 }
