@@ -296,7 +296,8 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
     const truth = mel ? q.song.melody.degrees[i] : q.units[i].sym;
     const shown = mel ? truth : T.displayToken(q.units[i].token);
     const given = mel ? st.melSlots[i] : st.chordSlots[i];
-    if (answered) {
+    if (answered && !R) return <button key={i} className={cls} style={style} onClick={() => { if (!mel) playBar(i); }}><span>{given}</span></button>;  // после проверки ответ не раскрываем: такты как введены, только вердикт и процент
+    if (answered) {  // проверка в админке: сверка с разметкой
       const ok = truth === given;
       return <button key={i} className={cls + (ok ? ' correct' : ' wrong')} style={style} onClick={() => { if (!mel) playBar(i); }}><span>{shown}</span>{!ok && <small>your answer: {given}</small>}</button>;
     }
@@ -360,9 +361,9 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
           {answered && (
             <>
               <div className="text-lg"><b className="font-semibold">{all ? tx('yes') : tx('notQuite')}</b> <span className="text-ink-2">{tx('score', score)}</span></div>
-              <div className="text-ink-2 text-[15px] mt-1">{tr(T.keyName(s.key.mode, s.key.tonic), locale)}{q.chords ? ': ' + s.chords.map(c => T.letterName(s.key.mode, c.c, s.key.tonic)).join(' – ') : ''}.</div>
+              {R && <><div className="text-ink-2 text-[15px] mt-1">{tr(T.keyName(s.key.mode, s.key.tonic), locale)}{q.chords ? ': ' + s.chords.map(c => T.letterName(s.key.mode, c.c, s.key.tonic)).join(' – ') : ''}.</div>
               {q.melody && <div className="text-ink-2 text-[15px] mt-1">{tx('melodyNotes', { notes: s.melody.degrees.map(d => T.NOTE_NAMES[(s.key.tonic + T.degreeByLabel(s.key.mode, d).st) % 12]).join(' ') })}</div>}
-              <div className="text-ink-2 text-[15px] mt-0.5">{tx('onPiano')} <button className={EX.LINK} onClick={() => q.chords ? playChordsSynth(st.chordSlots) : playDegreesSynth(st.melSlots)}>{tx('yourVar')}</button> · <button className={EX.LINK} onClick={() => q.chords ? playChordsSynth(q.units.map(u => u.sym)) : playDegreesSynth(s.melody.degrees)}>{tx('correctVar')}</button></div>
+              <div className="text-ink-2 text-[15px] mt-0.5">{tx('onPiano')} <button className={EX.LINK} onClick={() => q.chords ? playChordsSynth(st.chordSlots) : playDegreesSynth(st.melSlots)}>{tx('yourVar')}</button> · <button className={EX.LINK} onClick={() => q.chords ? playChordsSynth(q.units.map(u => u.sym)) : playDegreesSynth(s.melody.degrees)}>{tx('correctVar')}</button></div></>}
             </>
           )}
         </div>
