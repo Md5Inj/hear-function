@@ -2,6 +2,7 @@
 /* Таблица тактов под полосой времени: ступень, начало, длина, прослушать, добавить такт, удалить.
    bars: [{ c, beats, t, dur, n, barStart }] — тактовые единицы с явными временами. */
 import SB from '@/lib/songs-db';
+import T from '@/lib/theory';
 import { YTP as Y } from '@/lib/yt';
 import { r3 } from './GridTimeline';
 
@@ -23,7 +24,7 @@ const renumber = bars => { let n = 0; return bars.map(b => ({ ...b, n: b.barStar
 /* Операции над тактами, общие для полосы времени и таблицы точных значений */
 export function barOps(song, bars, setBars) {
   const mode = song.key.mode, bpb = song.beatsPerBar || 4;
-  const levels = SB.SONG_LEVELS[mode]; const vocab = levels[levels.length - 1].vocab;
+  const levels = SB.SONG_LEVELS[mode]; const vocab = T.sortByDegree(mode, levels[levels.length - 1].vocab);
   const setT = (k, t) => { t = Math.max(0, +t || 0); setBars(bars.map((b, i) => i === k - 1 ? { ...b, dur: r3(Math.max(0.1, t - b.t)) } : i === k ? { ...b, t: r3(t), dur: r3(Math.max(0.1, b.t + b.dur - t)) } : b)); };
   const setDur = (k, dur) => { dur = Math.max(0.1, +dur || 0); const delta = dur - bars[k].dur; setBars(bars.map((b, i) => i === k ? { ...b, dur: r3(dur) } : i > k ? { ...b, t: r3(b.t + delta) } : b)); };
   const setC = (k, c) => setBars(bars.map((b, i) => i === k ? { ...b, c } : b));

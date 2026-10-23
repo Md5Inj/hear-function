@@ -109,7 +109,7 @@ export default function ProgressionsExercise({ mode, mistakes, tonus }) {
 
   const q = st.q, answered = st.answered, slots = st.slots;
   const groups = [[], [], []];
-  if (q) page.levelDef().vocab.forEach(sym => { groups[isChrom(sym, q.mode) ? 2 : /7|ø|sus/.test(sym) ? 1 : 0].push(sym); });
+  if (q) T.sortByDegree(q.mode, page.levelDef().vocab).forEach(sym => { groups[isChrom(sym, q.mode) ? 2 : /7|ø|sus/.test(sym) ? 1 : 0].push(sym); });
   const all = answered && q.chords.every((tok, i) => T.parseToken(tok).symbol === slots[i]);
   const where = q ? [q.entry.name].concat(q.entry.examples).filter(Boolean).join('; ') : '';
   return (

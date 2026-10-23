@@ -280,7 +280,7 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
   // строки по 4 такта
   const rows = []; let row = null, barsInRow = 0;
   if (q && q.chords) q.units.forEach((u, i) => { if (u.barStart && (!row || barsInRow >= 4)) { row = []; rows.push(row); barsInRow = 0; } if (u.barStart) barsInRow++; if (!row) { row = []; rows.push(row); } row.push(i); });
-  const groups = [[], [], []]; if (q && q.chords) q.vocab.forEach(sym => groups[isChrom(sym, q.mode) ? 2 : /7|ø|sus/.test(sym) ? 1 : 0].push(sym));
+  const groups = [[], [], []]; if (q && q.chords) T.sortByDegree(q.mode, q.vocab).forEach(sym => groups[isChrom(sym, q.mode) ? 2 : /7|ø|sus/.test(sym) ? 1 : 0].push(sym));
   const empty = loaded && !q;
   const exhausted = !R && !mistakes && !tonus && empty && allDone();  // песни уровня есть, но все пройдены
   const noMistakes = mistakes && mk.loaded && loaded && !q;
