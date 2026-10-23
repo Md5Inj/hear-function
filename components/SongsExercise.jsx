@@ -154,14 +154,6 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
     rerender();
     if (q && st.played && Y.ready) playFragment();
   }
-  function retry() {
-    const q = st.q; if (!q || !st.answered) return;
-    clearTimeout(st.autoTimer); st.answered = false;
-    if (q.chords) { st.chordSlots = st.chordSlots.map((v, i) => v === q.units[i].sym ? v : null); st.selChord = Math.max(0, st.chordSlots.findIndex(v => !v)); }
-    if (q.melody) { st.melSlots = st.melSlots.map((v, i) => v === q.song.melody.degrees[i] ? v : null); st.selMel = Math.max(0, st.melSlots.findIndex(v => !v)); }
-    st.active = q.chords && st.chordSlots.some(v => !v) ? 'chords' : 'melody'; st.anchor = null;
-    rerender();
-  }
   const fns = useRef(null); fns.current = { next, check, playCadence, playPhrase, playSelection, toggleLoop, fillChord, fillMel, playFragment, rerender };
 
   /* тело страницы: нижняя панель плеера; корпус; плеер YouTube; ошибки роликов */
@@ -277,6 +269,8 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
   const bars = u => q.units.slice(0, u + 1).filter(x => x.barStart).length;
   const [ra, rb] = q ? selRange() : [0, 0];
   const all = answered && q && (!q.chords || q.units.every((u, i) => u.sym === st.chordSlots[i])) && (!q.melody || q.song.melody.degrees.every((d, i) => d === st.melSlots[i]));
+  const scoreItems = answered && q ? [].concat(q.chords ? q.units.map((u, i) => u.sym === st.chordSlots[i]) : [], q.melody ? q.song.melody.degrees.map((d, i) => d === st.melSlots[i]) : []) : [];
+  const score = { n: scoreItems.filter(Boolean).length, total: scoreItems.length, pct: scoreItems.length ? Math.round(scoreItems.filter(Boolean).length / scoreItems.length * 100) : 0 };
   // строки по 4 такта
   const rows = []; let row = null, barsInRow = 0;
   if (q && q.chords) q.units.forEach((u, i) => { if (u.barStart && (!row || barsInRow >= 4)) { row = []; rows.push(row); barsInRow = 0; } if (u.barStart) barsInRow++; if (!row) { row = []; rows.push(row); } row.push(i); });
@@ -358,13 +352,13 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
           <div className={EX.ACTIONS} id="answerActions">
             {!answered && <Button variant="primary" size="primary" disabled={!complete()} onClick={check}>{tx('check')}</Button>}
             {answered && <Button variant="primary" size="primary" onClick={next}>{R ? tx('nextSong') : tx('next')}</Button>}
-            {answered && !all && <Button onClick={retry}>{tx('fix')}</Button>}
           </div>
         )}
         <div className={EX.feedbackCls(answered, all)}>
           {answered && (
             <>
-              <div className="text-lg"><b className="font-semibold">{all ? tx('yes') : tx('notQuite')}</b> {T.keyName(s.key.mode, s.key.tonic)}{q.chords ? ': ' + s.chords.map(c => T.letterName(s.key.mode, c.c, s.key.tonic)).join(' – ') : ''}.</div>
+              <div className="text-lg"><b className="font-semibold">{all ? tx('yes') : tx('notQuite')}</b> <span className="text-ink-2">{tx('score', score)}</span></div>
+              <div className="text-ink-2 text-[15px] mt-1">{T.keyName(s.key.mode, s.key.tonic)}{q.chords ? ': ' + s.chords.map(c => T.letterName(s.key.mode, c.c, s.key.tonic)).join(' – ') : ''}.</div>
               {q.melody && <div className="text-ink-2 text-[15px] mt-1">{tx('melodyNotes', { notes: s.melody.degrees.map(d => T.NOTE_NAMES[(s.key.tonic + T.degreeByLabel(s.key.mode, d).st) % 12]).join(' ') })}</div>}
               <div className="text-ink-2 text-[15px] mt-0.5">{tx('onPiano')} <button className={EX.LINK} onClick={() => q.chords ? playChordsSynth(st.chordSlots) : playDegreesSynth(st.melSlots)}>{tx('yourVar')}</button> · <button className={EX.LINK} onClick={() => q.chords ? playChordsSynth(q.units.map(u => u.sym)) : playDegreesSynth(s.melody.degrees)}>{tx('correctVar')}</button></div>
             </>

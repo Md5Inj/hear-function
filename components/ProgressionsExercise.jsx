@@ -76,12 +76,6 @@ export default function ProgressionsExercise({ mode, mistakes, tonus }) {
     st.q = newQuestion(); st.answered = false; st.slots = st.q ? st.q.chords.map(() => null) : []; st.sel = 0; rerender();
     if (autoplay !== false && st.unlocked) play();
   }
-  function retry() {
-    const q = st.q; if (!q || !st.answered) return;
-    clearTimeout(st.autoTimer); st.answered = false;
-    st.slots = st.slots.map((v, i) => v === T.parseToken(q.chords[i]).symbol ? v : null); st.sel = Math.max(0, st.slots.findIndex(v => !v));
-    rerender();
-  }
   const fns = useRef(null); fns.current = { next, play, check, playChord, fill };
   useEffect(() => { if (mistakes && !mk.loaded) return; fns.current.next(false); return () => clearTimeout(st.autoTimer); }, [mode, mistakes, tonus, mk.loaded]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -111,6 +105,8 @@ export default function ProgressionsExercise({ mode, mistakes, tonus }) {
   const groups = [[], [], []];
   if (q) T.sortByDegree(q.mode, page.levelDef().vocab).forEach(sym => { groups[isChrom(sym, q.mode) ? 2 : /7|ø|sus/.test(sym) ? 1 : 0].push(sym); });
   const all = answered && q.chords.every((tok, i) => T.parseToken(tok).symbol === slots[i]);
+  const nRight = answered ? q.chords.filter((tok, i) => T.parseToken(tok).symbol === slots[i]).length : 0;
+  const score = answered ? { n: nRight, total: q.chords.length, pct: Math.round(nRight / q.chords.length * 100) } : null;
   const where = q ? [q.entry.name].concat(q.entry.examples).filter(Boolean).join('; ') : '';
   return (
     <>
@@ -136,10 +132,9 @@ export default function ProgressionsExercise({ mode, mistakes, tonus }) {
         <div className={EX.ACTIONS + ' mt-[22px]'}>
           {!answered && <Button variant="primary" size="primary" disabled={!q || slots.some(s => !s)} onClick={check}>{tx('check')}</Button>}
           {answered && <Button variant="primary" size="primary" onClick={() => next()}>{tx('next')}</Button>}
-          {answered && !all && <Button onClick={retry}>{tx('fix')}</Button>}
         </div>
         <div className={EX.feedbackCls(answered, all)}>
-          {answered && <><div className="text-lg"><b className="font-semibold">{all ? tx('yes') : tx('notQuite')}</b> {T.keyName(q.mode, q.tonicPc)}: {q.chords.map(c => T.letterName(q.mode, c, q.tonicPc)).join(' – ')}.</div>{where && <div className="text-ink-2 text-[15px] mt-1">{where}.</div>}</>}
+          {answered && <><div className="text-lg"><b className="font-semibold">{all ? tx('yes') : tx('notQuite')}</b> <span className="text-ink-2">{tx('score', score)}</span></div><div className="text-ink-2 text-[15px] mt-1">{T.keyName(q.mode, q.tonicPc)}: {q.chords.map(c => T.letterName(q.mode, c, q.tonicPc)).join(' – ')}.</div>{where && <div className="text-ink-2 text-[15px] mt-1">{where}.</div>}</>}
         </div>
       </section>
     </>

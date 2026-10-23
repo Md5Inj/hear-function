@@ -175,6 +175,7 @@
     "fragmentInfo": "Fragment {start}–{end}, {n} bars. 'Listen': cadence in the song's key, then the recording. Click a bar to play just it. The % sign repeats the previous bar's chord.",
     "listen": "Listen",
     "check": "Check",
-    "fix": "Fix"
+    "fix": "Fix",
+    "score": "{n} of {total} right · {pct}%"
   }
 }

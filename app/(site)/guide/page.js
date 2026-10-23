@@ -39,7 +39,7 @@ export default function Guide() {
       <ol>
         <li>"Listen": a cadence, then a sequence of chords, one per bar.</li>
         <li>Fill the bars with chords from the panel or with digits. The cursor moves on its own to the next empty bar.</li>
-        <li>"Check" shows where the mistake is; "Fix" keeps the correct bars and lets you re-answer. Space plays the chord of the current bar.</li>
+        <li>"Check" shows the answer and how much you got right. Space plays the chord of the current bar.</li>
       </ol>
 
       <h2>Song chords</h2>
