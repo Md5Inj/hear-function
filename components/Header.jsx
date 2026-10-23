@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { useApp } from './AppProvider';
 import { cn } from '@/lib/utils';
+import Logo from './Logo';
 
 const NAV = [['/degrees', 'degrees'], ['/intervals', 'intervals', true], ['/progressions', 'progressions'], ['/songs', 'songs'], ['/melodies', 'melodies'], ['/metronome', 'metronome', true]];
 const pill = 'px-2.5 py-[7px] rounded-full text-ink-2 transition-colors hover:bg-tint hover:text-ink hover:no-underline';
@@ -51,7 +52,7 @@ export default function Header() {
   const close = () => { setOpen(false); setSub(null); };
   return (
     <header className="relative flex items-center justify-between gap-4 pt-[22px] pb-[18px] border-b border-rule">
-      <Link className="font-serif text-xl font-medium text-ink tracking-[-0.01em] whitespace-nowrap hover:no-underline" href="/">hear function</Link>
+      <Link className="hover:no-underline" href="/" aria-label="hear function"><Logo /></Link>
 
       {/* широкие экраны: полное меню */}
       <nav className="hidden lg:flex items-center gap-0.5 text-[15px]">
@@ -106,7 +107,7 @@ export default function Header() {
       {open && (
         <div className="lg:hidden fixed inset-0 z-[80] bg-paper overflow-y-auto overscroll-contain">
           <div className="flex items-center justify-between px-5 pt-[22px] pb-[18px] border-b border-rule">
-            <Link className="font-serif text-xl font-medium text-ink tracking-[-0.01em] whitespace-nowrap hover:no-underline" href="/" onClick={close}>hear function</Link>
+            <Link className="hover:no-underline" href="/" aria-label="hear function" onClick={close}><Logo /></Link>
             <div className="flex items-center gap-2">
               <LangSwitch />
               <button className="inline-flex items-center justify-center w-10 h-10 rounded-full border border-rule bg-paper text-ink-2 hover:text-ink hover:border-ink" aria-label="Close menu" onClick={close}>

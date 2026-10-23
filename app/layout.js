@@ -6,7 +6,7 @@ import { currentState, currentUserFull } from '@/lib/session';
 import { appSettings } from '@/lib/api';
 import AppProvider from '@/components/AppProvider';
 
-export const metadata = { title: 'hear function', description: 'Relative pitch on real music', icons: { icon: 'data:,' } };
+export const metadata = { title: 'hear function', description: 'Relative pitch on real music' };
 export const dynamic = 'force-dynamic';
 
 /* Корневой каркас: провайдеры локали (next-intl) и состояния. Шапка — в app/(site)/layout.js. */
