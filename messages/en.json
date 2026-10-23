@@ -180,7 +180,9 @@
     "fix": "Fix",
     "score": "{n} of {total} right · {pct}%",
     "inKey": "in",
-    "videoFailed": "Video failed to load ({err}), picking another song"
+    "videoFailed": "Video failed to load ({err}), picking another song",
+    "tryAgain": "Try again",
+    "showAnswer": "Show answer"
   },
   "Level": {
     "lastLevel": "last level",

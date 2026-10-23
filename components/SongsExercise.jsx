@@ -139,21 +139,26 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
   function check() {
     const q = st.q; if (!q || st.answered || !complete()) return;
     st.answered = true; st.transport = false;
+    const first = !st.checked; st.checked = true;  // в счёт уровня, историю и ошибки идёт только первая проверка; повторные после «попробовать ещё раз» — для себя
     let all = true;
-    if (q.chords) q.units.forEach((u, i) => { if (u.sym !== st.chordSlots[i]) all = false; if (!R && !tonus) page.recordConfusion(u.sym, st.chordSlots[i]); });
-    if (q.melody) q.song.melody.degrees.forEach((d, i) => { if (d !== st.melSlots[i]) all = false; if (!R && !tonus) page.recordConfusion('♪' + d, '♪' + st.melSlots[i]); });
+    if (q.chords) q.units.forEach((u, i) => { if (u.sym !== st.chordSlots[i]) all = false; if (!R && !tonus && first) page.recordConfusion(u.sym, st.chordSlots[i]); });
+    if (q.melody) q.song.melody.degrees.forEach((d, i) => { if (d !== st.melSlots[i]) all = false; if (!R && !tonus && first) page.recordConfusion('♪' + d, '♪' + st.melSlots[i]); });
     if (R) { rerender(); R.onResult({ correct: all, answer: q.chords ? st.chordSlots.slice() : st.melSlots.slice(), truth: q.chords ? q.units.map(u => u.sym) : q.song.melody.degrees.slice() }); return; }
+    if (!first) { rerender(); return; }
     const levelUp = tonus ? false : page.recordResult(all); if (levelUp) setLevelUpOpen(true);
     logAnswer({ exercise: isMel ? 'melodies' : 'songs', mode: q.mode, level: page.prog().level, songId: q.song.id, title: q.song.title, artist: q.song.artist, correct: all,
       answer: q.chords ? st.chordSlots.slice() : st.melSlots.slice(), truth: q.chords ? q.units.map(u => u.sym) : q.song.melody.degrees });
     session.push(all); if (all && mkRef.current.on) mkRef.current.remove(i => i.songId === q.song.id); rerender();
     if (!levelUp && store.songAutoNext) { clearTimeout(st.autoTimer); st.autoTimer = setTimeout(next, all ? 6000 : 12000); }
   }
+  /* после проверки: «попробовать ещё раз» возвращает к правке (такты как введены), «показать ответ» раскрывает разметку */
+  function retry() { clearTimeout(st.autoTimer); st.answered = false; st.revealed = false; rerender(); }
+  function reveal() { clearTimeout(st.autoTimer); st.revealed = true; rerender(); }
   function next() {
     clearTimeout(st.autoTimer); clearTimeout(st.cadenceTimer); Y.pause(); stopSound(); st.playToken = (st.playToken || 0) + 1;
     if (R && st.q && st.answered) { R.onNext(); return; }
     session.nextIfDone();
-    st.q = newQuestion(); st.answered = false; st.transport = false; st.playing = -1; st.melPlaying = false;
+    st.q = newQuestion(); st.answered = false; st.checked = false; st.revealed = false; st.transport = false; st.playing = -1; st.melPlaying = false;
     const q = st.q;
     if (q) {
       st.chordSlots = q.units.map(() => null); st.melSlots = q.melody ? q.song.melody.degrees.map(() => null) : [];
@@ -303,7 +308,7 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
     const truth = mel ? q.song.melody.degrees[i] : q.units[i].sym;
     const shown = mel ? truth : T.displayToken(q.units[i].token);
     const given = mel ? st.melSlots[i] : st.chordSlots[i];
-    if (answered && !R) return <button key={i} className={cls} style={style} onClick={() => { if (!mel) playBar(i); }}><span>{given}</span></button>;  // после проверки ответ не раскрываем: такты как введены, только вердикт и процент
+    if (answered && !R && !st.revealed) return <button key={i} className={cls} style={style} onClick={() => { if (!mel) playBar(i); }}><span>{given}</span></button>;  // после проверки ответ не раскрываем: такты как введены, только вердикт и процент
     if (answered) {  // проверка в админке: сверка с разметкой
       const ok = truth === given;
       return <button key={i} className={cls + (ok ? ' correct' : ' wrong')} style={style} onClick={() => { if (!mel) playBar(i); }}><span>{shown}</span>{!ok && <small>your answer: {given}</small>}</button>;
@@ -362,13 +367,15 @@ export default function SongsExercise({ task, mode, forcedSong, review, mistakes
           <div className={EX.ACTIONS} id="answerActions">
             {!answered && <Button variant="primary" size="primary" disabled={!complete()} onClick={check}>{tx('check')}</Button>}
             {answered && <Button variant="primary" size="primary" onClick={next}>{R ? tx('nextSong') : tx('next')}</Button>}
+            {answered && !R && !all && !st.revealed && <Button onClick={retry}>{tx('tryAgain')}</Button>}
+            {answered && !R && !all && !st.revealed && <Button variant="quiet" onClick={reveal}>{tx('showAnswer')}</Button>}
           </div>
         )}
         <div className={EX.feedbackCls(answered, all)}>
           {answered && (
             <>
               <div className="text-lg"><b className="font-semibold">{all ? tx('yes') : tx('notQuite')}</b> <span className="text-ink-2">{tx('score', score)}</span></div>
-              {R && <><div className="text-ink-2 text-[15px] mt-1">{tr(T.keyName(s.key.mode, s.key.tonic), locale)}{q.chords ? ': ' + s.chords.map(c => T.letterName(s.key.mode, c.c, s.key.tonic)).join(' – ') : ''}.</div>
+              {(R || st.revealed) && <><div className="text-ink-2 text-[15px] mt-1">{tr(T.keyName(s.key.mode, s.key.tonic), locale)}{q.chords ? ': ' + s.chords.map(c => T.letterName(s.key.mode, c.c, s.key.tonic)).join(' – ') : ''}.</div>
               {q.melody && <div className="text-ink-2 text-[15px] mt-1">{tx('melodyNotes', { notes: s.melody.degrees.map(d => T.NOTE_NAMES[(s.key.tonic + T.degreeByLabel(s.key.mode, d).st) % 12]).join(' ') })}</div>}
               <div className="text-ink-2 text-[15px] mt-0.5">{tx('onPiano')} <button className={EX.LINK} onClick={() => q.chords ? playChordsSynth(st.chordSlots) : playDegreesSynth(st.melSlots)}>{tx('yourVar')}</button> · <button className={EX.LINK} onClick={() => q.chords ? playChordsSynth(q.units.map(u => u.sym)) : playDegreesSynth(s.melody.degrees)}>{tx('correctVar')}</button></div></>}
             </>

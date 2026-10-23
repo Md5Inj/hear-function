@@ -48,7 +48,7 @@ function GuideEn() {
         <li>A player with a fragment of a real recording is at the bottom. "Listen" plays a cadence in the song's key and then the fragment; "No cadence" the fragment only; "Tonic" a single tonic chord.</li>
         <li>Clicking a bar plays just it. Select several bars with the mouse or Shift with arrows; a panel appears above the selection: play, loop, slow to half speed.</li>
         <li>Enter the chord of each bar. The "%" sign repeats the previous bar's chord.</li>
-        <li>"Check" shows whether you are right and what share of the bars you got.</li>
+        <li>"Check" shows whether you are right and what share of the bars you got. Then "Try again" keeps your bars for another go, "Show answer" reveals the correct chords and lets you compare on piano.</li>
       </ol>
       <p>Passed songs no longer come up. When a level's songs run out, you can repeat them or move to the mistakes.</p>
 
@@ -116,7 +116,7 @@ function GuideRu() {
         <li>Внизу плеер с фрагментом настоящей записи. «Слушать» играет каденцию в тональности песни и затем фрагмент; «Без каденции» только фрагмент; «Тоника» один тонический аккорд.</li>
         <li>Клик по такту играет только его. Выделите несколько тактов мышью или Shift со стрелками, над выделением появится панель: сыграть, зациклить, замедлить вдвое.</li>
         <li>Впишите аккорд каждого такта. Знак «%» повторяет аккорд предыдущего такта.</li>
-        <li>«Проверить» показывает, верно ли и какую долю тактов вы угадали.</li>
+        <li>«Проверить» показывает, верно ли и какую долю тактов вы угадали. Затем «Попробовать ещё раз» оставляет ваши такты для новой попытки, «Показать ответ» раскрывает правильные аккорды и даёт сравнить на пианино.</li>
       </ol>
       <p>Пройденные песни больше не выпадают. Когда песни уровня закончились, можно повторить их или перейти к ошибкам.</p>
 
