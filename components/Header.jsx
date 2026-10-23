@@ -39,8 +39,16 @@ export default function Header() {
   const t = useTranslations('Nav');
   const u = store.user;
   const [open, setOpen] = useState(false);
-  useEffect(() => { setOpen(false); }, [path]);  // закрываем бургер при переходе
-  const close = () => setOpen(false);
+  const [sub, setSub] = useState(null);  // раскрытый пункт аккордеона в мобильном меню
+  useEffect(() => { setOpen(false); }, [path]);  // закрываем меню при переходе
+  useEffect(() => {  // пока меню на весь экран открыто — страница под ним не прокручивается
+    if (!open) return;
+    const prev = document.body.style.overflow; document.body.style.overflow = 'hidden';
+    const onKey = ev => { if (ev.key === 'Escape') setOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => { document.body.style.overflow = prev; document.removeEventListener('keydown', onKey); };
+  }, [open]);
+  const close = () => { setOpen(false); setSub(null); };
   return (
     <header className="relative flex items-center justify-between gap-4 pt-[22px] pb-[18px] border-b border-rule">
       <Link className="font-serif text-xl font-medium text-ink tracking-[-0.01em] whitespace-nowrap hover:no-underline" href="/">hear function</Link>
@@ -96,13 +104,35 @@ export default function Header() {
       </div>
 
       {open && (
-        <>
-          <div className="lg:hidden fixed inset-0 z-[65]" onClick={close} aria-hidden="true" />
-          <nav className="lg:hidden absolute left-0 right-0 top-full z-[70] mt-px bg-paper border-b border-rule shadow-[0_16px_32px_rgba(28,32,51,0.14)] p-3 grid gap-1">
-            {NAV.map(([href, key]) => (
-              <Link key={href} href={href} onClick={close} className={cn(sheetItem, path === href && menuItemOn)}>{t(key)}</Link>
+        <div className="lg:hidden fixed inset-0 z-[80] bg-paper overflow-y-auto overscroll-contain">
+          <div className="flex items-center justify-between px-5 pt-[22px] pb-[18px] border-b border-rule">
+            <Link className="font-serif text-xl font-medium text-ink tracking-[-0.01em] whitespace-nowrap hover:no-underline" href="/" onClick={close}>hear function</Link>
+            <div className="flex items-center gap-2">
+              <LangSwitch />
+              <button className="inline-flex items-center justify-center w-10 h-10 rounded-full border border-rule bg-paper text-ink-2 hover:text-ink hover:border-ink" aria-label="Close menu" onClick={close}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+              </button>
+            </div>
+          </div>
+          <nav className="px-3 py-3 grid gap-1">
+            {NAV.map(([href, key, plain]) => plain ? (
+              <Link key={href} href={href} onClick={close} className={cn(sheetItem, 'text-lg', path === href && menuItemOn)}>{t(key)}</Link>
+            ) : (
+              <div key={href}>
+                <button type="button" aria-expanded={sub === href} onClick={() => setSub(s => s === href ? null : href)}
+                  className={cn(sheetItem, 'text-lg w-full justify-between bg-transparent border-0 cursor-pointer text-left', path === href && 'text-accent')}>
+                  {t(key)}
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cn('text-ink-3 transition-transform', sub === href && 'rotate-180')}><path d="M6 9l6 6 6-6" /></svg>
+                </button>
+                {sub === href && (
+                  <div className="grid gap-1 ml-3 pl-3 border-l-2 border-rule mb-1">
+                    <Link href={href + '?mode=major'} prefetch={false} onClick={close} className={sheetItem}>{t('major')}</Link>
+                    <Link href={href + '?mode=minor'} prefetch={false} onClick={close} className={sheetItem}>{t('minor')}</Link>
+                  </div>
+                )}
+              </div>
             ))}
-            <div className="my-1 border-t border-rule" />
+            <div className="my-2 border-t border-rule" />
             <Link href="/guide" onClick={close} className={cn(sheetItem, path === '/guide' && menuItemOn)}><HelpIcon />{t('help')}</Link>
             {u ? (
               <>
@@ -115,7 +145,7 @@ export default function Header() {
               <button className="mt-1 rounded-full bg-accent text-white px-4 py-2.5 text-base font-medium text-center hover:bg-[#2740b8]" onClick={() => { close(); openLogin(); }}>{t('signIn')}</button>
             )}
           </nav>
-        </>
+        </div>
       )}
     </header>
   );
