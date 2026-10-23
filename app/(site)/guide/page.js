@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-export const metadata = { title: 'How to use — hear function' };
+export const metadata = { title: 'How to use — Hear Function' };
 const KEYS = [
   ['1–7', 'degree or the chord of that degree'], ['− then digit', 'lowered degree (♭3, ♭6, ♭7) or its chord'], ['+ then digit', 'raised degree'],
   ['Enter', 'check the answer, then the next question'], ['Backspace', 'erase the answer in the current bar'], ['← →', 'move to the neighbouring bar, with Shift select a range'],

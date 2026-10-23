@@ -6,7 +6,7 @@ import P from '@/lib/progressions';
 import Songs from '@/lib/songs-db';
 import IV from '@/lib/intervals';
 import LevelPath from '@/components/LevelPath';
-export const metadata = { title: 'Progress — hear function' };
+export const metadata = { title: 'Progress — Hear Function' };
 const EX = [['degrees', 'Degrees', P.DEGREE_LEVELS], ['intervals', 'Intervals', { major: IV.LEVELS }], ['progressions', 'Progressions', P.PROG_LEVELS], ['songs', 'Song chords', Songs.SONG_LEVELS]];
 const fmt = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); };
 export default async function Progress() {

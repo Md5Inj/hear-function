@@ -1,6 +1,6 @@
 import { requireUser, resolveMode } from '@/lib/page-mode';
 import SongsExercise from '@/components/SongsExercise';
-export const metadata = { title: 'Song chords — hear function' };
+export const metadata = { title: 'Song chords — Hear Function' };
 export default async function Page({ searchParams }) {
   const user = await requireUser('/songs');
   const sp = (await searchParams) || {};

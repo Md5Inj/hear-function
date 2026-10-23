@@ -89,7 +89,7 @@ function LoginModal({ onClose, onDone }) {
     <div className="auth-overlay" onClick={ev => { if (ev.target === ev.currentTarget) onClose(); }}>
       <form className="auth-box" onSubmit={submit}>
         <button className="modal-close" type="button" aria-label="Close" data-tip="Close" onClick={onClose}>×</button>
-        <div className="auth-title">hear function</div>
+        <div className="auth-title">Hear Function</div>
         <div className="auth-sub">Sign in so your progress and passed songs are saved.</div>
         <label>Email<input type="email" name="email" ref={emailRef} required autoComplete="email" /></label>
         <label>Password<input type="password" name="password" required minLength={6} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} /></label>
